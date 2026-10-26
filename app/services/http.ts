@@ -60,6 +60,9 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     reportReview: (reviewId, reason) => call(`/reviews/${reviewId}/report`, { method: 'POST', body: { reason } }),
     recordEvent: (vendorId, event, opts) => call<void>(`/vendors/${vendorId}/events`, { method: 'POST', body: { event, ...opts } }).catch(() => {}),
 
+    promoted: (placement, f, origin) => call('/promoted', { query: { placement, ...(f ? searchQuery(f) : {}), ...origin } }),
+    recordPromotionEvent: (id, event) => call<void>(`/promotions/${id}/events`, { method: 'POST', body: { event } }).catch(() => {}),
+
     requestCode: (phone) => call('/auth/code', { method: 'POST', body: { phone } }),
     verifyCode: (phone, code, name) => call('/auth/verify', { method: 'POST', body: { phone, code, name } }),
     me: () => call('/auth/me'),
@@ -74,6 +77,10 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     vendorProducts: () => call('/me/products'),
     setProductAvailable: (id, available) => call<void>(`/me/products/${id}`, { method: 'PATCH', body: { available } }).then(() => {}),
     createProduct: (input) => call('/me/products', { method: 'POST', body: input }),
+    promotionPlans: () => call('/promotions/plans'),
+    myPromotions: () => call('/me/promotions'),
+    requestPromotion: (input) => call('/me/promotions', { method: 'POST', body: input }),
+    updateMyPromotion: (id, change) => call(`/me/promotions/${id}`, { method: 'PATCH', body: change }),
 
     adminVendors: () => call('/admin/vendors'),
     adminVendor: (id) => orNull(call(`/admin/vendors/${id}`)),
@@ -83,5 +90,8 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     setReviewStatus: (id, status) => call<void>(`/admin/reviews/${id}`, { method: 'PATCH', body: { status } }).then(() => {}),
     adminShoppers: () => call('/admin/shoppers'),
     setShopperStatus: (id, status, reason) => call<void>(`/admin/shoppers/${id}`, { method: 'PATCH', body: { status, reason } }).then(() => {}),
+    adminPromotions: () => call('/admin/promotions'),
+    createPromotion: (input) => call('/admin/promotions', { method: 'POST', body: input }),
+    decidePromotion: (id, action, note) => call(`/admin/promotions/${id}`, { method: 'PATCH', body: { action, note } }),
   }
 }

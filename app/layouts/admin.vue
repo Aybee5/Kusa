@@ -4,10 +4,11 @@ const { user } = useRequireRole('admin')
 const signOut = useSignOut()
 const api = useApi()
 const { data: counts } = await useAsyncData('admin-counts', async () => {
-  const [vendors, reviews] = await Promise.all([api.adminVendors(), api.adminReviews()])
+  const [vendors, reviews, promotions] = await Promise.all([api.adminVendors(), api.adminReviews(), api.adminPromotions()])
   return {
     pending: vendors.filter((v) => v.status === 'pending').length,
     flagged: reviews.filter((r) => r.status === 'flagged').length,
+    requests: promotions.filter((p) => p.state === 'pending').length,
   }
 })
 
@@ -15,6 +16,7 @@ const items = computed(() => [
   { to: '/admin/vendors', label: 'Vendors', icon: 'store', badge: counts.value?.pending },
   { to: '/admin/reviews', label: 'Reviews', icon: 'star', badge: counts.value?.flagged },
   { to: '/admin/shoppers', label: 'Shoppers', icon: 'users', badge: 0 },
+  { to: '/admin/promotions', label: 'Promotions', icon: 'megaphone', badge: counts.value?.requests },
 ])
 const isActive = (to: string) => route.path.startsWith(to)
 </script>

@@ -4,8 +4,8 @@
  */
 export default defineEventHandler(async (event) => {
   const key = getRouterParam(event, 'key') ?? ''
-  if (!/^(product|verification)\/[\w-]+\/[\w-]+\.(jpg|png|webp)$/.test(key)) throw createError({ statusCode: 404 })
-  const isPublic = key.startsWith('product/')
+  if (!/^(product|banner|verification)\/[\w-]+\/[\w-]+\.(jpg|png|webp)$/.test(key)) throw createError({ statusCode: 404 })
+  const isPublic = !key.startsWith('verification/')
   if (!isPublic) {
     const q = getQuery(event)
     if (!checkFileSignature(key, q.exp, q.sig)) throw createError({ statusCode: 403, message: 'This link has expired' })

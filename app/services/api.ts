@@ -2,8 +2,9 @@ import type {
   Product, Review, ReviewStatus, SearchFilters, SessionUser, ShopperStatus, Vendor, VendorStats, VendorStatus, VendorWithMeta,
 } from '#shared/types'
 import type {
-  AdminReview, AdminShopper, AdminVendor, Area, AuthResult, CodeSent, LatLng, NewProductInput, NewVendorInput,
-  ProductWithVendor, PublicReview, TrafficEvent, TrafficSourceKey, UploadKind, UploadResult, VerificationInput,
+  AdminPromotionInput, AdminReview, AdminShopper, AdminVendor, Area, AuthResult, CodeSent, LatLng, NewProductInput, NewPromotionInput,
+  NewVendorInput, ProductWithVendor, Promoted, Promotion, PromotionPlans, PublicReview, TrafficEvent, TrafficSourceKey, UploadKind,
+  UploadResult, VerificationInput,
 } from '#shared/types/api'
 
 export type * from '#shared/types/api'
@@ -24,6 +25,10 @@ export interface KusaApi {
   reportReview(reviewId: string, reason: string): Promise<void>
   recordEvent(vendorId: string, event: TrafficEvent, opts?: { firstVisitToday?: boolean; productId?: string; source?: TrafficSourceKey }): Promise<void>
 
+  // Sponsored placements
+  promoted(placement: 'home' | 'search', filters: SearchFilters | null, origin: LatLng | null): Promise<Promoted>
+  recordPromotionEvent(promotionId: string, event: 'impression' | 'click'): Promise<void>
+
   // Auth
   requestCode(phone: string): Promise<CodeSent>
   verifyCode(phone: string, code: string, name?: string): Promise<AuthResult>
@@ -41,6 +46,10 @@ export interface KusaApi {
   vendorProducts(): Promise<Product[]>
   setProductAvailable(productId: string, available: boolean): Promise<void>
   createProduct(input: NewProductInput): Promise<Product>
+  promotionPlans(): Promise<PromotionPlans>
+  myPromotions(): Promise<Promotion[]>
+  requestPromotion(input: NewPromotionInput): Promise<Promotion>
+  updateMyPromotion(id: string, change: { action: 'cancel' } | { paymentRef: string }): Promise<Promotion>
 
   // Admin
   adminVendors(): Promise<AdminVendor[]>
@@ -51,4 +60,7 @@ export interface KusaApi {
   setReviewStatus(id: string, status: ReviewStatus): Promise<void>
   adminShoppers(): Promise<AdminShopper[]>
   setShopperStatus(id: string, status: ShopperStatus, reason?: string): Promise<void>
+  adminPromotions(): Promise<Promotion[]>
+  createPromotion(input: AdminPromotionInput): Promise<Promotion>
+  decidePromotion(id: string, action: 'approve' | 'reject' | 'end', note?: string): Promise<Promotion>
 }

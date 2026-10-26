@@ -6,7 +6,7 @@ const Body = z.object({
   event: z.enum(['view', 'whatsapp', 'call', 'directions']),
   firstVisitToday: z.boolean().optional(),
   productId: z.string().max(64).optional(),
-  source: z.enum(['search', 'map', 'share', 'external', 'direct']).optional(),
+  source: z.enum(['search', 'map', 'share', 'external', 'direct', 'ad']).optional(),
 })
 
 /**

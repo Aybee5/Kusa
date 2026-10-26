@@ -17,6 +17,7 @@ async function req(method, path, { token, body, query } = {}) {
   try { data = text ? JSON.parse(text) : null } catch { data = text }
   return { status: res.status, data, headers: res.headers }
 }
+const todayLagos = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 async function signIn(phone, name) {
   const c = await req('POST', '/auth/code', { body: { phone } })
   if (c.status !== 200) throw new Error(`code ${phone}: ${c.status} ${JSON.stringify(c.data)}`)
@@ -139,6 +140,7 @@ try {
   ok('create product', r.status === 201 && r.data.image)
   ok('toggle availability', (await req('PATCH', `/me/products/${r.data.id}`, { token: newbie.token, body: { available: false } })).data?.available === false)
   ok('pending business hidden', (await req('GET', `/vendors/${newVendorId}`)).status === 404)
+  ok('unverified business cannot promote', (await req('POST', '/me/promotions', { token: newbie.token, body: { kind: 'featured', city: 'Kano', category: null, durationDays: 7, startDate: todayLagos() } })).status === 403)
 
   // Admin
   const admin = await signIn('08000000001')
@@ -168,6 +170,85 @@ try {
   ok('reinstated shopper’s ratings count again', (await ratingOf('crunch-and-co')).count === crunchBase.count + 1)
   r = await req('GET', '/admin/vendors', { token: admin.token })
   ok('admin list shows stored rating', r.data.find((v) => v.slug === 'crunch-and-co')?.ratingCount === crunchBase.count + 1)
+
+  // Promotions
+  const KANO = { lat: 11.9965, lng: 8.531 }
+  const LAGOS = { lat: 6.5244, lng: 3.3792 }
+  const startDay = todayLagos()
+  r = await req('GET', '/promoted', { query: { placement: 'home', ...KANO } })
+  ok('home promotions: featured, banners and a product', r.status === 200 && r.data.featured.length >= 2 && r.data.banners.length >= 2 && r.data.products.length === 1,
+    `${r.data?.featured?.length}/${r.data?.banners?.length}/${r.data?.products?.length}`)
+  ok('waiting request not shown', !r.data.featured.some((v) => v.slug === 'suya-spot-by-musa'))
+  ok('sponsored cards carry distance and promotion id', r.data.featured.every((v) => typeof v.distanceKm === 'number' && v.promotionId))
+  ok('ended promotion not shown', !r.data.banners.some((b) => b.promotionId === 'promo7'))
+  ok('house banner links in-app', r.data.banners.some((b) => b.sponsor === 'Kusa' && b.link === '/vendor/signup' && !b.external))
+  r = await req('GET', '/promoted', { query: { placement: 'home', ...LAGOS } })
+  ok('city targeting: Kano-only promotions not shown in Lagos', r.data.featured.every((v) => v.slug === 'sweet-crumbs-bakery') && r.data.banners.every((b) => b.sponsor === 'Kusa') && r.data.products.length === 0,
+    r.data.featured.map((v) => v.slug).join(','))
+  r = await req('GET', '/promoted', { query: { placement: 'home' } })
+  ok('browse anywhere sees every city', r.data.featured.length >= 2)
+  r = await req('GET', '/promoted', { query: { placement: 'search', category: 'cakes', ...KANO } })
+  ok('sponsored results follow search filters', r.data.featured.length > 0 && r.data.featured.every((v) => v.category === 'cakes'))
+  r = await req('GET', '/promoted', { query: { placement: 'search', minRating: 5, ...KANO } })
+  ok('sponsored results respect the rating filter', r.data.featured.every((v) => v.rating.average >= 5))
+  r = await req('GET', '/promotions/plans')
+  ok('plans and prices', r.data.plans.length === 3 && r.data.plans.every((p) => p.prices.length > 0) && r.data.cities.includes('Kano'))
+
+  const featuredBody = { kind: 'featured', city: 'Kano', category: null, durationDays: 7, startDate: startDay, paymentRef: 'TRF/TEST/1' }
+  ok('duration must be a plan', (await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, durationDays: 10 } })).status === 400)
+  ok('start date can’t be past', (await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, startDate: '2020-01-01' } })).status === 400)
+  ok('can’t promote someone else’s product', (await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, kind: 'product', productId: 'p1' } })).status === 400)
+  ok('banner needs a headline', (await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, kind: 'banner' } })).status === 400)
+  ok('shoppers can’t promote', (await req('POST', '/me/promotions', { token: (await signIn('08130000954')).token, body: featuredBody })).status === 403)
+  r = await req('POST', '/me/promotions', { token: owner.token, body: featuredBody })
+  ok('vendor requests a featured spot', r.status === 201 && r.data.state === 'pending' && r.data.price === 5000, `${r.status} ${r.data?.message ?? ''}`)
+  const reqId = r.data.id
+  ok('vendor sees the request', (await req('GET', '/me/promotions', { token: owner.token })).data.some((x) => x.id === reqId))
+  r = await req('GET', '/admin/promotions', { token: admin.token })
+  ok('admin sees requests', r.data.some((x) => x.id === reqId && !x.byAdmin) && r.data.some((x) => x.id === 'promo6' && x.state === 'pending'))
+  ok('rejecting needs a note', (await req('PATCH', `/admin/promotions/${reqId}`, { token: admin.token, body: { action: 'reject' } })).status === 400)
+  r = await req('PATCH', `/admin/promotions/${reqId}`, { token: admin.token, body: { action: 'approve' } })
+  const days = r.data ? (Date.parse(r.data.endsAt) - Date.parse(r.data.startsAt)) / 86400000 : 0
+  ok('approve starts it now for 7 days', r.data?.state === 'running' && Math.abs(days - 7) < 0.001, `${r.data?.state} ${days}`)
+  ok('can’t approve twice', (await req('PATCH', `/admin/promotions/${reqId}`, { token: admin.token, body: { action: 'approve' } })).status === 409)
+  r = await req('GET', '/promoted', { query: { placement: 'home', ...KANO } })
+  ok('approved business appears as sponsored', r.data.featured.some((v) => v.slug === 'bite-box-kano' && v.promotionId === reqId))
+  ok('impression counted', (await req('POST', `/promotions/${reqId}/events`, { body: { event: 'impression' } })).status === 204)
+  await req('POST', `/promotions/${reqId}/events`, { body: { event: 'click' } })
+  await req('POST', '/promotions/promo6/events', { body: { event: 'impression' } })
+  r = await req('GET', '/me/promotions', { token: owner.token })
+  ok('vendor sees impressions and clicks', r.data.find((x) => x.id === reqId)?.impressions === 1 && r.data.find((x) => x.id === reqId)?.clicks === 1)
+  ok('waiting promotions don’t count impressions', (await req('GET', '/admin/promotions', { token: admin.token })).data.find((x) => x.id === 'promo6')?.impressions === 0)
+  ok('ad traffic source accepted', (await req('POST', '/vendors/bite-box-kano/events', { body: { event: 'view', source: 'ad', firstVisitToday: false } })).status === 204)
+  r = await req('PATCH', `/admin/promotions/${reqId}`, { token: admin.token, body: { action: 'end' } })
+  ok('admin ends it early', r.data?.state === 'ended')
+  r = await req('GET', '/promoted', { query: { placement: 'home', ...KANO } })
+  ok('ended promotion stops showing', !r.data.featured.some((v) => v.slug === 'bite-box-kano'))
+
+  r = await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, kind: 'product', productId: (await req('GET', '/vendors/v7/products')).data[0].id } })
+  ok('vendor requests a promoted product', r.status === 201 && r.data.productName)
+  ok('vendor cancels a waiting request', (await req('PATCH', `/me/promotions/${r.data.id}`, { token: owner.token, body: { action: 'cancel' } })).data?.state === 'cancelled')
+  ok('can’t cancel twice', (await req('PATCH', `/me/promotions/${r.data.id}`, { token: owner.token, body: { action: 'cancel' } })).status === 404)
+  const banner = (await req('POST', '/uploads', { token: owner.token, body: { kind: 'banner', dataUrl: PNG } })).data
+  ok('banner image is public', banner.key?.startsWith('banner/') && (await fetch(B.replace('/api', '') + banner.url)).status === 200)
+  ok('shoppers can’t upload banners', (await req('POST', '/uploads', { token: (await signIn('08020007719')).token, body: { kind: 'banner', dataUrl: PNG } })).status === 403)
+  const adminImg = (await req('POST', '/uploads', { token: admin.token, body: { kind: 'banner', dataUrl: PNG } })).data
+  ok('can’t use someone else’s banner image', (await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, kind: 'banner', headline: 'Hot small chops', imageKey: adminImg.key } })).status === 400)
+  r = await req('POST', '/me/promotions', { token: owner.token, body: { ...featuredBody, kind: 'banner', headline: 'Hot small chops', imageKey: banner.key, durationDays: 14 } })
+  ok('vendor requests a banner with an image', r.status === 201 && r.data.imageUrl && r.data.price === 18000)
+
+  const house = { kind: 'banner', headline: 'Cake week on Kusa', linkUrl: 'https://example.com/cake-week', city: null, category: 'cakes', durationDays: 3, startDate: startDay, price: 0 }
+  ok('house banner link must be safe', (await req('POST', '/admin/promotions', { token: admin.token, body: { ...house, linkUrl: 'javascript:alert(1)' } })).status === 400)
+  r = await req('POST', '/admin/promotions', { token: admin.token, body: house })
+  ok('admin creates a house banner', r.status === 201 && r.data.state === 'running' && r.data.byAdmin)
+  const houseId = r.data.id
+  r = await req('GET', '/promoted', { query: { placement: 'home', ...KANO } })
+  ok('category banner hidden on home', !r.data.banners.some((b) => b.promotionId === houseId))
+  let seen = false
+  for (let i = 0; i < 12 && !seen; i++) seen = (await req('GET', '/promoted', { query: { placement: 'search', category: 'cakes', ...KANO } })).data.banners.some((b) => b.promotionId === houseId && b.external)
+  ok('category banner shown when browsing that category', seen)
+  ok('admin needs a business for a featured spot', (await req('POST', '/admin/promotions', { token: admin.token, body: { ...house, kind: 'featured', linkUrl: undefined } })).status === 400)
+  ok('shopper can’t use admin promotions', (await req('GET', '/admin/promotions', { token: owner.token })).status === 403)
 
   // CORS for the native apps
   const pre = await fetch(B + '/vendors', { method: 'OPTIONS', headers: { origin: 'capacitor://localhost', 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization' } })

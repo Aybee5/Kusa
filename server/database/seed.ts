@@ -6,7 +6,10 @@ import * as schema from './schema'
 import { buildAllStats, products, reviews, seedRatings, shoppers, vendors } from './demo-data'
 import { todayLagos } from '../../shared/utils/catalog'
 
-const { users, vendors: vendorsT, products: productsT, reviews: reviewsT, vendorDailyStats, vendorSourceStats, productDailyViews } = schema
+const {
+  users, vendors: vendorsT, products: productsT, reviews: reviewsT, vendorDailyStats, vendorSourceStats, productDailyViews,
+  promotions: promotionsT, promotionDailyStats,
+} = schema
 
 /** Demo admin. Sign in with this number; in development the code is shown on screen. */
 export const DEMO_ADMIN_PHONE = '+2348000000001'
@@ -21,6 +24,7 @@ const RATER_NAMES = [
 const TINTS = ['#E3F1EA', '#E4E1F2', '#FBE7D9', '#F4ECC4', '#EFE0EC', '#D9EBE6', '#F1D3DA']
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000)
+const productNamed = (vendorId: string, name: string) => products.find((p) => p.vendorId === vendorId && p.name.startsWith(name))!.id
 const asDate = (iso: string) => new Date(`${iso}T10:00:00+01:00`)
 
 export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = console.log): Promise<boolean> {
@@ -94,6 +98,33 @@ export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = cons
       )
       if (productRows.length) await tx.insert(productDailyViews).values(productRows)
     }
+
+    // Promotions: running, scheduled-to-approve, a house banner and an ended one
+    type Promo = typeof promotionsT.$inferInsert
+    const promo = (o: Omit<Promo, 'endsAt' | 'createdAt' | 'decidedAt'> & { startsAt: Date }): Promo => ({
+      ...o,
+      endsAt: new Date(o.startsAt.getTime() + o.durationDays * 86400000),
+      createdAt: new Date(o.startsAt.getTime() - 86400000),
+      decidedAt: o.status === 'pending' ? null : o.startsAt,
+    })
+    const promos: Promo[] = [
+      promo({ id: 'promo1', kind: 'featured', vendorId: 'v1', city: 'Kano', category: null, durationDays: 14, price: 9000, startsAt: daysAgo(3), status: 'approved', paymentRef: 'TRF/HADIZA/1022', createdBy: 'owner-v1' }),
+      promo({ id: 'promo2', kind: 'featured', vendorId: 'v12', city: null, category: null, durationDays: 30, price: 16000, startsAt: daysAgo(10), status: 'approved', paymentRef: 'Maryam Aliyu (GTB)', createdBy: 'owner-v12' }),
+      promo({ id: 'promo3', kind: 'banner', vendorId: 'v11', headline: 'Handmade waist beads, made to order', city: 'Kano', category: null, durationDays: 7, price: 10000, startsAt: daysAgo(2), status: 'approved', paymentRef: 'TRF/AMAL/0919', createdBy: 'owner-v11' }),
+      promo({ id: 'promo4', kind: 'banner', vendorId: null, headline: 'Sell from home? List your business on Kusa', linkUrl: '/vendor/signup', city: null, category: null, durationDays: 30, price: 0, startsAt: daysAgo(5), status: 'approved', createdBy: 'admin' }),
+      promo({ id: 'promo5', kind: 'product', vendorId: 'v4', productId: productNamed('v4', 'Chin chin'), city: 'Kano', category: null, durationDays: 7, price: 3000, startsAt: daysAgo(1), status: 'approved', paymentRef: 'TRF/NGOZI/3310', createdBy: 'owner-v4' }),
+      promo({ id: 'promo6', kind: 'featured', vendorId: 'v3', city: 'Kano', category: null, durationDays: 7, price: 5000, startsAt: new Date(`${todayLagos()}T00:00:00+01:00`), status: 'pending', paymentRef: 'TRF/2210/MUSA', createdBy: 'owner-v3' }),
+      promo({ id: 'promo7', kind: 'banner', vendorId: 'v1', productId: productNamed('v1', 'Small chops party pack'), headline: 'Party packs for naming ceremonies', city: 'Kano', category: null, durationDays: 7, price: 10000, startsAt: daysAgo(40), status: 'approved', paymentRef: 'TRF/HADIZA/0915', createdBy: 'owner-v1' }),
+    ]
+    await tx.insert(promotionsT).values(promos)
+    const promoStats = promos.filter((x) => x.status === 'approved').flatMap((x, n) => {
+      const days = Math.min(x.durationDays, Math.ceil((Date.now() - x.startsAt.getTime()) / 86400000))
+      return Array.from({ length: days }, (_, i) => {
+        const impressions = 140 + ((i * 37 + n * 53) % 160)
+        return { promotionId: x.id!, day: todayLagos(new Date(x.startsAt.getTime() + i * 86400000)), impressions, clicks: Math.round(impressions * (0.025 + ((i + n) % 4) / 100)) }
+      })
+    })
+    if (promoStats.length) await tx.insert(promotionDailyStats).values(promoStats)
   })
   log('[db] loaded demo data')
   return true

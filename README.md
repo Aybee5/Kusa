@@ -51,17 +51,20 @@ Useful scripts:
 - Vendor profile with products, reviews (average, star breakdown, written reviews, report) and opening hours
 - Product page with options and "Order on WhatsApp" with a pre-filled message
 - Phone sign-in, one rating per business (editable), saved businesses
+- Sponsored placements, always labelled: a Featured row and banners on the home page, sponsored businesses, a product and a banner in search results
 
 **Vendors** (`/vendor/signup`, `/vendor`, `/vendor/listings`)
 - Sign-up: phone, business details with location pin, then verification (government ID, selfie, optional proof of business) using the camera; photos upload privately
 - Dashboard: profile views and unique visitors for 7 or 30 days with change on the previous period, a daily chart, WhatsApp taps, calls, direction requests, how shoppers found them, rating and most viewed products
 - Listings: add products with a photo, mark items sold out
+- Promote (`/vendor/promote`): request a featured spot, a banner ad (own image or a text banner, with live preview) or a promoted product for 7, 14 or 30 days, choose the city and where it shows, see the price and how to pay, add a transfer reference; then track impressions, taps and days left
 
 **Admin** (`/admin`, admins only)
 - Vendors: verification queue, search and filters, suspend with a reason, reinstate
 - Vendor review: the uploaded ID and selfie (short-lived private links), reviewer checklist, approve, request changes or reject with a note, suspend
 - Reviews: flagged reviews with the reason and reviewer history; keep, hide or restore
 - Shoppers: search, clear flags, suspend with a reason (signs them out and stops their ratings counting), reinstate
+- Promotions: requests with the amount and payment reference; approve once paid, or reject with a reason; end any promotion early; create promotions directly (deals agreed outside the app, free trials, or Kusa's own banners with a link)
 
 Pages work from 360px phones to wide laptops.
 
@@ -84,11 +87,11 @@ shared/                types and helpers used by both app and server
 
 | Area | Endpoints |
 | --- | --- |
-| Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort` (leave out `lat`/`lng` to browse anywhere), `GET /areas`, `GET /health`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key` |
+| Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort` (leave out `lat`/`lng` to browse anywhere), `GET /areas`, `GET /health`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key`, `GET /promoted?placement=home\|search&…same filters`, `POST /promotions/:id/events`, `GET /promotions/plans` |
 | Auth | `POST /auth/code`, `POST /auth/verify`, `GET /auth/me`, `POST /auth/logout` |
 | Signed in | `POST /vendors/:id/reviews`, `GET /vendors/:id/reviews/mine`, `POST /reviews/:id/report`, `POST /uploads` |
-| Vendor | `GET/POST /me/vendor`, `POST /me/vendor/verification`, `GET /me/vendor/stats`, `GET/POST /me/products`, `PATCH /me/products/:id` |
-| Admin | `GET /admin/vendors`, `GET/PATCH /admin/vendors/:id`, `GET /admin/vendors/:id/products`, `GET /admin/reviews`, `PATCH /admin/reviews/:id`, `GET /admin/shoppers`, `PATCH /admin/shoppers/:id` |
+| Vendor | `GET/POST /me/vendor`, `POST /me/vendor/verification`, `GET /me/vendor/stats`, `GET/POST /me/products`, `PATCH /me/products/:id`, `GET/POST /me/promotions`, `PATCH /me/promotions/:id` |
+| Admin | `GET /admin/vendors`, `GET/PATCH /admin/vendors/:id`, `GET /admin/vendors/:id/products`, `GET /admin/reviews`, `PATCH /admin/reviews/:id`, `GET /admin/shoppers`, `PATCH /admin/shoppers/:id`, `GET/POST /admin/promotions`, `PATCH /admin/promotions/:id` |
 
 **Sign-in.** Phone number + 6-digit SMS code (10-minute expiry, 5 tries, one code per minute). Codes and session tokens are stored only as hashes. The app sends `Authorization: Bearer <token>`, which works the same on the website and in the native apps. Sessions last 60 days (`SESSION_DAYS`). Numbers listed in `ADMIN_PHONES` become admins when they sign in.
 
@@ -110,6 +113,13 @@ With `GEO_SEARCH=postgis`, start-up enables the extension and adds the column an
 
 **Ratings.** One rating per shopper per business. Averages count only published reviews from accounts that aren't suspended. Each business stores its average, count and star breakdown (`rating_avg`, `rating_count`, `rating_breakdown`), and database triggers recount them whenever a review is added, edited, reported, hidden or deleted, or a reviewer is suspended or reinstated. So "Top rated" and the minimum-rating filter run in the database and stay correct however many businesses match. The triggers live in migration `0001_vendor_ratings.sql`. A new account posting several ratings within an hour is flagged automatically, and vendors or shoppers can report a review for admins to check.
 
+**Promotions.** Three kinds: a featured business, a banner ad, a promoted product. A verified vendor picks one, a duration and a start date; the price is fixed from the plan at that moment and the request waits. An admin approves it once the payment arrives, and it runs from the requested start (or from approval, if that's later) for exactly its number of days. Nothing needs to run when it expires: whether a promotion is waiting, scheduled, running or ended is worked out from its status and dates on every request.
+- *Targeting.* City: the shopper's city is the nearest city centre within 60 km of where they're searching from. Shoppers browsing anywhere see every city; shoppers far from any city see only "all cities" promotions. Category: an untargeted promotion shows on the home page and in every search; a category one only when that category is being browsed.
+- *Relevance.* Sponsored businesses in search must still match the shopper's filters (category, rating, open now, delivery, text). Only the distance limit is relaxed, and the card shows how far away they are. A sponsored business isn't repeated in the results below it.
+- *Fairness.* When more promotions qualify than there are slots, a fresh random pick is made on each request, one per vendor.
+- *Stats.* Impressions (at least half on screen) and taps are counted per day, only while a promotion is running. Visits from sponsored slots also show in the vendor's "How shoppers found you" as "Your promotions on Kusa".
+- *Prices and payment.* Defaults: featured ₦5,000 / ₦9,000 / ₦16,000, banner ₦10,000 / ₦18,000 / ₦32,000, product ₦3,000 / ₦5,500 / ₦10,000 for 7 / 14 / 30 days. Change them with `PROMOTION_PRICES` (the apps read prices from the server, so no app release is needed). Set `PAYMENT_BANK_NAME`, `PAYMENT_ACCOUNT_NAME` and `PAYMENT_ACCOUNT_NUMBER` to show your account on the request form; without them, vendors are told Kusa will contact them on WhatsApp.
+
 **Views and visitors.** Vendor and product pages send `POST /vendors/:id/events`: a view (a unique visitor the first time a device opens that vendor on a Lagos day), WhatsApp, call or directions taps, and where the shopper came from (search, map, shared link, other site). Counts are kept per day.
 
 **Photos.** Uploads are checked to be real JPEG, PNG or WebP files (max 6 MB; the app shrinks them first). Product photos are public; ID and selfie photos are private and only reachable through signed links that expire after 15 minutes. Storage is a folder on disk by default, or any S3-compatible bucket (Cloudflare R2, AWS S3…) with the `S3_*` settings.
@@ -119,7 +129,7 @@ With `GEO_SEARCH=postgis`, start-up enables the extension and adds the column an
 The server is a standard Node app (`.output/server/index.mjs`) that needs a Postgres database.
 
 1. Create a database (Neon, Supabase, Railway, RDS, or your own) and set `DATABASE_URL` (add `?sslmode=require` for hosted ones).
-2. Set `AUTH_SECRET` (long random string), `ADMIN_PHONES`, `GEO_SEARCH` (`basic` or `postgis`), `SMS_PROVIDER=termii` with `TERMII_API_KEY` and `TERMII_SENDER_ID`, and the `S3_*` settings for photos.
+2. Set `AUTH_SECRET` (long random string), `ADMIN_PHONES`, `GEO_SEARCH` (`basic` or `postgis`), `SMS_PROVIDER=termii` with `TERMII_API_KEY` and `TERMII_SENDER_ID`, the `S3_*` settings for photos, and the `PAYMENT_*` settings (plus `PROMOTION_PRICES` if you want different prices).
 3. Build and run: `npm run build && node .output/server/index.mjs`, or use the `Dockerfile` (`docker compose --profile full up --build` runs it locally with a database).
 
 Migrations run automatically when the server starts. Leave `SEED_DEMO_DATA` unset in production.
@@ -148,4 +158,7 @@ The app build has no server of its own; it calls the API at `NUXT_PUBLIC_API_BAS
 - Text vendors when they're approved, asked for changes or suspended (hook point marked in `server/api/admin/vendors/[id]/index.patch.ts`).
 - Replace the review time placeholder "[X] working days" in the vendor verification step.
 - Add real Help, Terms and Privacy pages (linked in the footer), including how ID photos are stored and for how long.
+- Confirm promotion prices and set your payment account (`PROMOTION_PRICES`, `PAYMENT_*`). Add online payment (Paystack) later if manual confirmation becomes slow.
+- Text vendors when a promotion is approved or rejected, and tell admins about new requests (hook points in `server/api/admin/promotions/[id].patch.ts` and `server/api/me/promotions/index.post.ts`).
+- Publish advertising rules (what banners may say or show, refunds) and link them from the Promote page.
 - Put the API behind a rate limiter (Cloudflare, your host, or a reverse proxy) for `/api/auth/*` and `/api/uploads`.

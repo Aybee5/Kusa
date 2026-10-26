@@ -22,6 +22,11 @@ const nearbyTitle = computed(() => {
 
 const { data: fresh } = await useAsyncData('home-fresh', () => api.latestProducts(origin.value, 4), { watch: [origin] })
 
+// Sponsored slots, targeted to the city being browsed. A failure here never breaks the page.
+const { data: promoted } = await useAsyncData('home-promoted', () => api.promoted('home', null, origin.value).catch(() => null), { watch: [origin] })
+const sponsoredProduct = computed(() => promoted.value?.products[0] ?? null)
+const freshList = computed(() => (fresh.value ?? []).filter((i) => i.product.id !== sponsoredProduct.value?.product.id).slice(0, sponsoredProduct.value ? 3 : 4))
+
 const { user } = useSession()
 const q = ref('')
 function search() {
@@ -67,6 +72,15 @@ function search() {
       </div>
     </section>
 
+    <section v-if="promoted?.featured.length" class="flex flex-col gap-2.5 lg:gap-4" aria-labelledby="featured-h">
+      <h2 id="featured-h" class="text-[17px] font-bold lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">Featured on Kusa</h2>
+      <div class="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 lg:mx-0 lg:grid lg:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] lg:gap-4 lg:overflow-visible lg:px-0">
+        <PromoSlot v-for="v in promoted.featured" :key="v.promotionId" :promotion-id="v.promotionId" class="flex w-[232px] shrink-0 lg:w-auto">
+          <VendorCard :vendor="v" sponsored class="w-full" />
+        </PromoSlot>
+      </div>
+    </section>
+
     <section class="flex flex-col gap-2.5 lg:gap-4">
       <div class="flex items-baseline justify-between gap-3">
         <h2 class="text-[17px] font-bold lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{{ nearbyTitle }}</h2>
@@ -77,10 +91,25 @@ function search() {
       </div>
     </section>
 
+    <section v-if="promoted?.banners.length" aria-label="Sponsored" class="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-5 px-5 lg:mx-0 lg:scroll-px-0 lg:gap-4 lg:px-0">
+      <PromoSlot
+        v-for="b in promoted.banners"
+        :key="b.promotionId"
+        :promotion-id="b.promotionId"
+        class="w-[88%] shrink-0 snap-start lg:w-[calc(50%-8px)]"
+        :class="promoted.banners.length === 1 ? '!w-full' : ''"
+      >
+        <PromoBanner :banner="b" />
+      </PromoSlot>
+    </section>
+
     <section class="flex flex-col gap-1 lg:gap-4">
       <h2 class="mb-1.5 text-[17px] font-bold lg:mb-0 lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">Just listed nearby</h2>
       <div class="flex flex-col lg:grid lg:grid-cols-[repeat(auto-fill,minmax(360px,1fr))] lg:gap-3">
-        <ProductRow v-for="item in fresh" :key="item.product.id" :item="item" />
+        <PromoSlot v-if="sponsoredProduct" :promotion-id="sponsoredProduct.promotionId">
+          <ProductRow :item="sponsoredProduct" sponsored />
+        </PromoSlot>
+        <ProductRow v-for="item in freshList" :key="item.product.id" :item="item" />
       </div>
     </section>
 

@@ -142,7 +142,56 @@ export const productDailyViews = pgTable('product_daily_views', {
   views: integer('views').notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.productId, t.day] })])
 
+/**
+ * Paid placements. Vendors request one (featured business, banner ad or
+ * promoted product) for a number of days; an admin approves it once payment is
+ * confirmed. Admins can also create placements directly, including house
+ * banners with no vendor. Whether one is running is worked out from status +
+ * starts_at/ends_at, so nothing has to run when a promotion expires.
+ */
+export const promotions = pgTable('promotions', {
+  id: id(),
+  kind: text('kind', { enum: ['featured', 'banner', 'product'] }).notNull(),
+  /** Null only for an admin's house banner. */
+  vendorId: text('vendor_id').references(() => vendors.id, { onDelete: 'cascade' }),
+  /** The promoted product, or the product a banner links to. */
+  productId: text('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  // Banner content. With no image the app draws a text banner in the vendor's colours.
+  headline: text('headline'),
+  imageKey: text('image_key'),
+  /** House banners only: an outside https link or an in-app path. */
+  linkUrl: text('link_url'),
+  // Targeting: null means everywhere / every category.
+  city: text('city'),
+  category: text('category'),
+  durationDays: integer('duration_days').notNull(),
+  /** Naira, fixed when the request is made. */
+  price: integer('price').notNull().default(0),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  status: text('status', { enum: ['pending', 'approved', 'rejected', 'cancelled'] }).notNull().default('pending'),
+  /** Transfer reference or sender name the vendor gives for their payment. */
+  paymentRef: text('payment_ref'),
+  /** Shown to the vendor, e.g. why a request was rejected. */
+  adminNote: text('admin_note'),
+  createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+}, (t) => [
+  index('promotions_live_idx').on(t.status, t.kind, t.endsAt),
+  index('promotions_vendor_idx').on(t.vendorId),
+])
+
+/** Impressions and clicks per promotion per Lagos day. */
+export const promotionDailyStats = pgTable('promotion_daily_stats', {
+  promotionId: text('promotion_id').notNull().references(() => promotions.id, { onDelete: 'cascade' }),
+  day: date('day').notNull(),
+  impressions: integer('impressions').notNull().default(0),
+  clicks: integer('clicks').notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.promotionId, t.day] })])
+
 export type UserRow = typeof users.$inferSelect
 export type VendorRow = typeof vendors.$inferSelect
 export type ProductRow = typeof products.$inferSelect
 export type ReviewRow = typeof reviews.$inferSelect
+export type PromotionRow = typeof promotions.$inferSelect

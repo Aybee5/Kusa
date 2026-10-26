@@ -113,9 +113,15 @@ export const SEARCH_LIMIT = 100
  * without one ("browse anywhere") there's no distance and "nearest" falls back
  * to top rated.
  */
-export async function searchVendors(f: SearchFilters, origin: LatLng | null, now = lagosNow()): Promise<VendorWithMeta[]> {
+export async function searchVendors(
+  f: SearchFilters,
+  origin: LatLng | null,
+  opts: { now?: { day: number; minutes: number }; ids?: string[] } = {},
+): Promise<VendorWithMeta[]> {
   const { vendors, products } = schema
+  const now = opts.now ?? lagosNow()
   const where: SQL[] = [eq(vendors.status, 'verified')]
+  if (opts.ids) where.push(opts.ids.length ? inArray(vendors.id, opts.ids) : sql`false`)
   if (f.category) where.push(eq(vendors.category, f.category))
   if (f.delivery) where.push(eq(vendors.delivery, true))
   if (f.pickup) where.push(eq(vendors.pickup, true))

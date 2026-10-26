@@ -33,6 +33,21 @@ export function serverConfig() {
       secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? '',
     },
     uploadsDir: env.UPLOADS_DIR ?? './.data/uploads',
+    payment: env.PAYMENT_ACCOUNT_NUMBER
+      ? { bankName: env.PAYMENT_BANK_NAME ?? '', accountName: env.PAYMENT_ACCOUNT_NAME ?? '', accountNumber: env.PAYMENT_ACCOUNT_NUMBER }
+      : null,
+    /** Optional JSON to change promotion prices, e.g. {"featured":{"7":6000}} */
+    promotionPrices: parseJson<Partial<Record<string, Record<string, number>>>>(env.PROMOTION_PRICES) ?? {},
+  }
+}
+
+function parseJson<T>(raw: string | undefined): T | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    console.warn('[config] ignoring a setting that is not valid JSON')
+    return null
   }
 }
 

@@ -4,6 +4,7 @@ import { storage } from '~/utils/storage'
 /** How the shopper got to this page, for the vendor's "How shoppers found you". */
 function trafficSource(route: ReturnType<typeof useRoute>): TrafficSourceKey {
   if (route.query.from === 'map') return 'map'
+  if (route.query.from === 'ad') return 'ad'
   if (route.query.ref === 'share') return 'share'
   if (window.history.state?.back) return 'search' // moved here inside Kusa
   const ref = document.referrer

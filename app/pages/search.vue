@@ -49,6 +49,16 @@ const { data: results, status } = await useAsyncData(
   { watch: [debouncedQ, () => filters.category, () => filters.minRating, () => filters.openNow, () => filters.delivery, () => filters.pickup, () => filters.radiusKm, () => filters.sort, origin] },
 )
 
+// Sponsored slots for the same search (they follow the filters; distance is relaxed and shown on the card).
+const { data: promoted } = await useAsyncData(
+  'search-promoted',
+  () => api.promoted('search', { ...filters, q: debouncedQ.value }, origin.value).catch(() => null),
+  { watch: [debouncedQ, () => filters.category, () => filters.minRating, () => filters.openNow, () => filters.delivery, () => filters.pickup, origin] },
+)
+const sponsoredIds = computed(() => new Set(promoted.value?.featured.map((v) => v.id)))
+const organic = computed(() => (results.value ?? []).filter((v) => !sponsoredIds.value.has(v.id)))
+const BANNER_AFTER = 5
+
 const categoryOptions = [{ value: '' as CategoryId | '', label: 'All categories' }, ...CATEGORIES.map((c) => ({ value: c.id as CategoryId | '', label: c.label }))]
 const radiusOptions = [1, 3, 5, 10, 0].map((r) => ({ value: r, label: r ? `Within ${r} km` : 'Any distance' }))
 const ratingOptions = [
@@ -175,7 +185,23 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
           <button type="button" class="btn-outline" @click="clearFilters">Clear filters</button>
         </div>
         <div v-else class="flex flex-col lg:gap-1">
-          <VendorRow v-for="v in results" :id="`result-${v.id}`" :key="v.id" :vendor="v" :active="v.id === activeId" />
+          <PromoSlot v-for="v in promoted?.featured" :key="v.promotionId" :promotion-id="v.promotionId" class="border-t border-line first:border-t-0 lg:border-t-0">
+            <VendorRow :vendor="v" sponsored />
+          </PromoSlot>
+          <PromoSlot v-for="item in promoted?.products" :key="item.promotionId" :promotion-id="item.promotionId" class="border-t border-line py-1 first:border-t-0 lg:border-t-0 lg:py-0">
+            <ProductRow :item="item" sponsored />
+          </PromoSlot>
+          <template v-for="(v, i) in organic" :key="v.id">
+            <VendorRow :id="`result-${v.id}`" :vendor="v" :active="v.id === activeId" />
+            <PromoSlot
+              v-for="b in (i === Math.min(BANNER_AFTER, organic.length) - 1 ? promoted?.banners : [])"
+              :key="b.promotionId"
+              :promotion-id="b.promotionId"
+              class="py-3"
+            >
+              <PromoBanner :banner="b" />
+            </PromoSlot>
+          </template>
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ const SOURCE_LABELS: Record<string, string> = {
   share: 'Shared links (WhatsApp, Instagram)',
   external: 'Google and other sites',
   direct: 'Saved or typed the link',
+  ad: 'Your promotions on Kusa',
 }
 
 /** GET /api/me/vendor/stats: the last 60 days of traffic, sources and product views (last 30 days). */

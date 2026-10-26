@@ -7,7 +7,7 @@ const { origin } = useLocation()
 const { user, ready } = useSession()
 const slug = String(route.params.slug)
 
-const { data: vendor } = await useAsyncData(`vendor-${slug}`, () => api.getVendor(slug, origin.value))
+const { data: vendor } = await useAsyncData(`rate-vendor-${slug}`, () => api.getVendor(slug, origin.value))
 if (!vendor.value) throw createError({ statusCode: 404, statusMessage: 'Business not found', fatal: true })
 
 const stars = ref(0)
@@ -46,7 +46,7 @@ async function submit() {
     useToast().show((e as Error).message)
     return
   }
-  await refreshNuxtData([`vendor-${slug}`, `vendor-reviews-${slug}`])
+  await refreshNuxtData([`vendor-${slug}`, `rate-vendor-${slug}`, `vendor-reviews-${slug}`])
   saving.value = false
   sent.value = true
 }
