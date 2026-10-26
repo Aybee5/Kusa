@@ -1,7 +1,8 @@
-import { and, eq, ilike, inArray, ne, or, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import type { CategoryId, Product, RatingSummary, SearchFilters, Vendor, VendorWithMeta } from '#shared/types'
 import type { LatLng } from '#shared/types/api'
-import { CATEGORIES, emptyRating, haversineKm, initialsOf, openStateFor } from '#shared/utils/catalog'
+import { CATEGORIES, haversineKm, initialsOf, lagosNow, openStateFor } from '#shared/utils/catalog'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import type { ProductRow, VendorRow } from '../database/schema'
 
 const isoDate = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : undefined)
@@ -53,28 +54,9 @@ export function toProduct(p: ProductRow): Product {
   }
 }
 
-/** Ratings that count publicly: published reviews by accounts that aren't suspended. */
-export async function ratingSummaries(vendorIds: string[]): Promise<Map<string, RatingSummary>> {
-  const out = new Map<string, RatingSummary>()
-  if (!vendorIds.length) return out
-  const { reviews, users } = schema
-  const rows = await useDb()
-    .select({ vendorId: reviews.vendorId, stars: reviews.stars, n: sql<number>`count(*)::int` })
-    .from(reviews)
-    .innerJoin(users, eq(users.id, reviews.userId))
-    .where(and(inArray(reviews.vendorId, vendorIds), eq(reviews.status, 'published'), ne(users.status, 'suspended')))
-    .groupBy(reviews.vendorId, reviews.stars)
-  for (const r of rows) {
-    const s = out.get(r.vendorId) ?? emptyRating()
-    s.breakdown[5 - r.stars] = r.n
-    out.set(r.vendorId, s)
-  }
-  for (const s of out.values()) {
-    s.count = s.breakdown.reduce((a, b) => a + b, 0)
-    const total = s.breakdown.reduce((sum, n, i) => sum + n * (5 - i), 0)
-    s.average = s.count ? Math.round((total / s.count) * 10) / 10 : 0
-  }
-  return out
+/** The stored rating (kept current by database triggers; see migration 0001). */
+export function ratingOf(v: VendorRow): RatingSummary {
+  return { average: v.ratingAvg, count: v.ratingCount, breakdown: [...v.ratingBreakdown] as RatingSummary['breakdown'] }
 }
 
 async function productSummaries(vendorIds: string[]) {
@@ -96,8 +78,7 @@ async function productSummaries(vendorIds: string[]) {
 
 export async function withMeta(rows: VendorRow[], origin: LatLng | null): Promise<VendorWithMeta[]> {
   const ids = rows.map((r) => r.id)
-  const [ratings, prods, owners] = await Promise.all([
-    ratingSummaries(ids),
+  const [prods, owners] = await Promise.all([
     productSummaries(ids),
     ids.length
       ? useDb().select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, rows.map((r) => r.ownerId)))
@@ -106,7 +87,7 @@ export async function withMeta(rows: VendorRow[], origin: LatLng | null): Promis
   const ownerName = new Map(owners.map((o) => [o.id, o.name]))
   return rows.map((r) => ({
     ...toVendor(r, ownerName.get(r.ownerId)),
-    rating: ratings.get(r.id) ?? emptyRating(),
+    rating: ratingOf(r),
     distanceKm: origin ? haversineKm(origin, r) : null,
     openState: openStateFor({ opens: r.opens, closes: r.closes, closedDays: r.closedDays }),
     productCount: prods.get(r.id)?.count ?? 0,
@@ -123,17 +104,23 @@ export async function findPublicVendor(key: string): Promise<VendorRow | null> {
   return v ?? null
 }
 
+export const SEARCH_LIMIT = 100
+
 /**
- * Search verified businesses. With an origin, results can be limited to a
- * radius and sorted nearest first; without one ("browse anywhere") there's no
- * distance and "nearest" falls back to top rated.
+ * Search verified businesses. Every filter and the sort run in the database,
+ * so the result limit always keeps the right businesses however many match.
+ * With an origin, results can be limited to a radius and sorted nearest first;
+ * without one ("browse anywhere") there's no distance and "nearest" falls back
+ * to top rated.
  */
-export async function searchVendors(f: SearchFilters, origin: LatLng | null): Promise<VendorWithMeta[]> {
+export async function searchVendors(f: SearchFilters, origin: LatLng | null, now = lagosNow()): Promise<VendorWithMeta[]> {
   const { vendors, products } = schema
   const where: SQL[] = [eq(vendors.status, 'verified')]
   if (f.category) where.push(eq(vendors.category, f.category))
   if (f.delivery) where.push(eq(vendors.delivery, true))
   if (f.pickup) where.push(eq(vendors.pickup, true))
+  if (f.minRating) where.push(gte(vendors.ratingAvg, f.minRating))
+  if (f.openNow) where.push(openAt(now))
   if (origin && f.radiusKm) where.push(...withinRadius(origin, f.radiusKm))
   const q = f.q.trim()
   if (q) {
@@ -147,18 +134,20 @@ export async function searchVendors(f: SearchFilters, origin: LatLng | null): Pr
     )!)
   }
   const nearest = origin ? nearestFirst(origin) : null
-  const base = useDb().select().from(vendors).where(and(...where))
-  const rows = await (nearest ? base.orderBy(nearest) : base).limit(500)
-  let list = await withMeta(rows, origin)
-  list = list
-    .filter((v) => !origin || !f.radiusKm || (v.distanceKm ?? 0) <= f.radiusKm)
-    .filter((v) => !f.minRating || v.rating.average >= f.minRating)
-    .filter((v) => !f.openNow || v.openState.open)
-  const dist = (v: VendorWithMeta) => v.distanceKm ?? 0
-  const byRating = (a: VendorWithMeta, b: VendorWithMeta) => b.rating.average - a.rating.average || b.rating.count - a.rating.count
-  return list.sort((a, b) =>
-    f.sort === 'nearest' && origin ? dist(a) - dist(b) : byRating(a, b) || dist(a) - dist(b),
-  ).slice(0, 100)
+  const topRated = [desc(vendors.ratingAvg), desc(vendors.ratingCount)]
+  const order = f.sort === 'nearest' && nearest
+    ? [nearest, vendors.id]
+    : [...topRated, ...(nearest ? [nearest] : []), vendors.id]
+  const rows = await useDb().select().from(vendors).where(and(...where)).orderBy(...order).limit(SEARCH_LIMIT)
+  return withMeta(rows, origin)
+}
+
+/** Open at a Lagos day and time, by the same rule as openStateFor(). */
+function openAt(now: { day: number; minutes: number }): SQL {
+  const { vendors } = schema
+  const min = (col: AnyPgColumn) => sql`(split_part(${col}, ':', 1)::int * 60 + split_part(${col}, ':', 2)::int)`
+  return sql`not (${vendors.closedDays} @> ${JSON.stringify([now.day])}::jsonb)
+    and ${min(vendors.opens)} <= ${now.minutes} and ${now.minutes} < ${min(vendors.closes)}`
 }
 
 /** Origin from ?lat=&lng= query params, or null to browse without distances. */

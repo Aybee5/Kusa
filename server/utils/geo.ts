@@ -5,8 +5,8 @@ import type { LatLng } from '#shared/types/api'
 /**
  * How "near me" searches run.
  *
- * - basic   (default): latitude/longitude columns with an indexed bounding box,
- *           then exact distance in the app. Works on any Postgres.
+ * - basic   (default): latitude/longitude columns with an indexed bounding box
+ *           and a flat-earth distance, both in SQL. Works on any Postgres.
  * - postgis: a geography column with a GiST index; the database filters by
  *           radius (ST_DWithin) and sorts nearest first (KNN). Faster once
  *           there are tens of thousands of businesses.
@@ -43,14 +43,26 @@ export async function setupGeo(pool: Pool, requested: GeoMode, log = console.log
 
 const point = (o: LatLng) => sql`ST_SetSRID(ST_MakePoint(${o.lng}, ${o.lat}), 4326)::geography`
 
-/** WHERE clause: within `radiusKm` of `origin`. */
+const KM_PER_DEGREE = (6371 * Math.PI) / 180
+
+/** Squared flat-earth distance in degrees of latitude; ranks like true distance at city scale. */
+function planarDist2(origin: LatLng): SQL {
+  const k = Math.cos((origin.lat * Math.PI) / 180)
+  return sql`((lat - ${origin.lat}) ^ 2 + ((lng - ${origin.lng}) * ${k}) ^ 2)`
+}
+
+/**
+ * WHERE clause: within `radiusKm` of `origin`. Basic mode uses the indexed
+ * bounding box to narrow the rows, then trims its corners off.
+ */
 export function withinRadius(origin: LatLng, radiusKm: number): SQL[] {
   if (active === 'postgis') return [sql`ST_DWithin(geog, ${point(origin)}, ${radiusKm * 1000})`]
-  const dLat = radiusKm / 111
-  const dLng = radiusKm / (111 * Math.cos((origin.lat * Math.PI) / 180))
+  const dLat = radiusKm / KM_PER_DEGREE
+  const dLng = dLat / Math.cos((origin.lat * Math.PI) / 180)
   return [
     sql`lat between ${origin.lat - dLat} and ${origin.lat + dLat}`,
     sql`lng between ${origin.lng - dLng} and ${origin.lng + dLng}`,
+    sql`${planarDist2(origin)} <= ${dLat * dLat}`,
   ]
 }
 
@@ -61,6 +73,5 @@ export function withinRadius(origin: LatLng, radiusKm: number): SQL[] {
  */
 export function nearestFirst(origin: LatLng): SQL {
   if (active === 'postgis') return sql`geog <-> ${point(origin)}`
-  const k = Math.cos((origin.lat * Math.PI) / 180)
-  return sql`(lat - ${origin.lat}) ^ 2 + ((lng - ${origin.lng}) * ${k}) ^ 2`
+  return planarDist2(origin)
 }

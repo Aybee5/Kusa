@@ -100,13 +100,15 @@ shared/                types and helpers used by both app and server
 
 Until they choose, results are sorted from a default area (central Kano), labelled as the default. The choice is remembered on the device. Vendors mark their shop by tapping the map or dragging a pin; sharing their phone's location is optional. Registration also asks for the area and city, which feed the area list.
 
+**Search.** Every filter (distance, category, rating, open now, delivery, pickup, text) and both sorts run in the database, so the 100 results returned are always the right 100.
+
 **Near-me search engine (`GEO_SEARCH`).** Two interchangeable modes, chosen with an environment variable:
-- `basic` (default): latitude/longitude columns, an indexed bounding box, then exact distance. Runs on any Postgres.
+- `basic` (default): latitude/longitude columns, an indexed bounding box and a flat-earth distance, all in SQL. Runs on any Postgres.
 - `postgis`: a generated `geography` column with a GiST index; the database filters by radius (`ST_DWithin`) and returns nearest first using the index (KNN). Use it once you have tens of thousands of businesses.
 
 With `GEO_SEARCH=postgis`, start-up enables the extension and adds the column and index if missing. If the database can't (no PostGIS, or no permission to create extensions), the server logs why and stays on `basic`, so nothing breaks. Switching back needs no database changes. `GET /api/health` shows which mode is active. The code is in `server/utils/geo.ts`.
 
-**Ratings.** One rating per shopper per business. Averages count only published reviews from accounts that aren't suspended. A new account posting several ratings within an hour is flagged automatically, and vendors or shoppers can report a review for admins to check.
+**Ratings.** One rating per shopper per business. Averages count only published reviews from accounts that aren't suspended. Each business stores its average, count and star breakdown (`rating_avg`, `rating_count`, `rating_breakdown`), and database triggers recount them whenever a review is added, edited, reported, hidden or deleted, or a reviewer is suspended or reinstated. So "Top rated" and the minimum-rating filter run in the database and stay correct however many businesses match. The triggers live in migration `0001_vendor_ratings.sql`. A new account posting several ratings within an hour is flagged automatically, and vendors or shoppers can report a review for admins to check.
 
 **Views and visitors.** Vendor and product pages send `POST /vendors/:id/events`: a view (a unique visitor the first time a device opens that vendor on a Lagos day), WhatsApp, call or directions taps, and where the shopper came from (search, map, shared link, other site). Counts are kept per day.
 

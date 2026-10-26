@@ -7,8 +7,7 @@ export async function toAdminVendors(rows: VendorRow[], withDocuments = false): 
   if (!rows.length) return []
   const db = useDb()
   const ids = rows.map((r) => r.id)
-  const [ratings, counts, owners] = await Promise.all([
-    ratingSummaries(ids),
+  const [counts, owners] = await Promise.all([
     db.select({ vendorId: schema.products.vendorId, n: sql<number>`count(*)::int` }).from(schema.products)
       .where(inArray(schema.products.vendorId, ids)).groupBy(schema.products.vendorId),
     db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, rows.map((r) => r.ownerId))),
@@ -18,8 +17,8 @@ export async function toAdminVendors(rows: VendorRow[], withDocuments = false): 
   return rows.map((r) => ({
     ...toVendor(r, ownerOf.get(r.ownerId)),
     listingCount: countOf.get(r.id) ?? 0,
-    ratingAverage: ratings.get(r.id)?.average ?? 0,
-    ratingCount: ratings.get(r.id)?.count ?? 0,
+    ratingAverage: r.ratingAvg,
+    ratingCount: r.ratingCount,
     ...(withDocuments
       ? { documentUrls: { id: signedFileUrl(r.idPhotoKey), selfie: signedFileUrl(r.selfieKey), proof: signedFileUrl(r.proofKey) } }
       : {}),

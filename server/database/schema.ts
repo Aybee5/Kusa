@@ -51,12 +51,21 @@ export const vendors = pgTable('vendors', {
   createdAt: createdAt(),
   submittedAt: timestamp('submitted_at', { withTimezone: true }),
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  // Rating totals, kept current by database triggers whenever a review or a
+  // reviewer's suspension changes (migration 0001). Same rules as the public
+  // rating: published reviews from accounts that aren't suspended.
+  ratingAvg: doublePrecision('rating_avg').notNull().default(0),
+  ratingCount: integer('rating_count').notNull().default(0),
+  /** counts for 5, 4, 3, 2, 1 stars */
+  ratingBreakdown: jsonb('rating_breakdown').$type<[number, number, number, number, number]>().notNull().default(sql`'[0,0,0,0,0]'::jsonb`),
 }, (t) => [
   uniqueIndex('vendors_slug_idx').on(t.slug),
   uniqueIndex('vendors_owner_idx').on(t.ownerId),
   index('vendors_status_idx').on(t.status),
   // Bounding-box prefilter for "near me" searches.
   index('vendors_lat_lng_idx').on(t.lat, t.lng),
+  // "Top rated" and the minimum-rating filter.
+  index('vendors_rating_idx').on(t.status, t.ratingAvg.desc(), t.ratingCount.desc()),
 ])
 
 export const products = pgTable('products', {
@@ -90,6 +99,7 @@ export const reviews = pgTable('reviews', {
   uniqueIndex('reviews_vendor_user_idx').on(t.vendorId, t.userId),
   index('reviews_vendor_status_idx').on(t.vendorId, t.status),
   index('reviews_status_idx').on(t.status),
+  index('reviews_user_idx').on(t.userId),
 ])
 
 export const otpCodes = pgTable('otp_codes', {

@@ -55,6 +55,16 @@ try {
   ok('health', r.data?.ok === true, `geo=${r.data?.geoSearch}`)
   if (process.env.EXPECT_GEO) ok(`geo mode is ${process.env.EXPECT_GEO}`, r.data?.geoSearch === process.env.EXPECT_GEO)
   ok('bad query rejected', (await req('GET', '/vendors', { query: { sort: 'nope' } })).status === 400)
+  r = await req('GET', '/vendors', { query: { openNow: true } })
+  ok('open now filter', r.status === 200 && r.data.every((v) => v.openState.open), `${r.data.length}`)
+  r = await req('GET', '/vendors', { query: { minRating: 4.5, lat: 11.9965, lng: 8.531, radiusKm: 10, sort: 'nearest' } })
+  ok('rating filter with nearest sort', r.data.length > 0 && r.data.every((v, i, a) => v.rating.average >= 4.5 && (i === 0 || a[i - 1].distanceKm <= v.distanceKm)), `${r.data.length}`)
+  r = await req('GET', '/vendors')
+  ok('stored averages match their star counts', r.data.every(({ rating: x }) => {
+    const n = x.breakdown.reduce((a, b) => a + b, 0)
+    const avg = n ? Math.round((x.breakdown.reduce((t, c, i) => t + c * (5 - i), 0) / n) * 10) / 10 : 0
+    return n === x.count && avg === x.average
+  }))
 
   // Auth
   ok('bad phone rejected', (await req('POST', '/auth/code', { body: { phone: '123' } })).status === 400)
@@ -71,11 +81,18 @@ try {
   ok('no token 401', (await req('GET', '/auth/me')).status === 401)
   ok('shopper cannot use admin', (await req('GET', '/admin/vendors', { token: shopper.token })).status === 403)
 
-  // Ratings
+  // Ratings (the stored totals must follow every change)
+  const ratingOf = async (slug) => (await req('GET', `/vendors/${slug}`)).data.rating
+  const base = await ratingOf('bite-box-kano')
+  const crunchBase = await ratingOf('crunch-and-co')
   r = await req('POST', '/vendors/bite-box-kano/reviews', { token: shopper.token, body: { stars: 4, tags: ['On time'], text: 'Came warm.' } })
   ok('rate a business', r.status === 200 && r.data.status === 'published')
   r = await req('POST', '/vendors/bite-box-kano/reviews', { token: shopper.token, body: { stars: 5, tags: [], text: 'Even better the second time.' } })
   ok('rating again updates it', r.data.stars === 5)
+  let now = await ratingOf('bite-box-kano')
+  ok('rating counted once, as 5 stars', now.count === base.count + 1 && now.breakdown[0] === base.breakdown[0] + 1 && now.breakdown[1] === base.breakdown[1], `${base.count}->${now.count}`)
+  await req('POST', '/vendors/crunch-and-co/reviews', { token: shopper.token, body: { stars: 3 } })
+  ok('second business counted', (await ratingOf('crunch-and-co')).count === crunchBase.count + 1)
   r = await req('GET', '/vendors/bite-box-kano/reviews/mine', { token: shopper.token })
   ok('my review', r.data?.stars === 5)
   r = await req('GET', '/vendors/bite-box-kano/reviews')
@@ -88,6 +105,8 @@ try {
   ok('vendor owner signs in as vendor', owner.user.role === 'vendor' && owner.user.vendorId === 'v7')
   ok('cannot rate own business', (await req('POST', '/vendors/v7/reviews', { token: owner.token, body: { stars: 5 } })).status === 403)
   ok('report review', (await req('POST', `/reviews/${reviewId}/report`, { token: owner.token, body: { reason: 'Never ordered' } })).status === 204)
+  now = await ratingOf('bite-box-kano')
+  ok('reported review stops counting', now.count === base.count && now.average === base.average)
 
   // Traffic
   const before = (await req('GET', '/me/vendor/stats', { token: owner.token })).data.daily.at(-1)
@@ -144,6 +163,11 @@ try {
   const s = r.data.find((x) => x.name === 'Test Shopper')
   ok('suspend shopper', (await req('PATCH', `/admin/shoppers/${s.id}`, { token: admin.token, body: { status: 'suspended', reason: 'Spam' } })).status === 204)
   ok('suspended shopper signed out', (await req('GET', '/auth/me', { token: shopper.token })).status === 401)
+  ok('suspended shopper’s ratings stop counting', (await ratingOf('crunch-and-co')).count === crunchBase.count)
+  await req('PATCH', `/admin/shoppers/${s.id}`, { token: admin.token, body: { status: 'active' } })
+  ok('reinstated shopper’s ratings count again', (await ratingOf('crunch-and-co')).count === crunchBase.count + 1)
+  r = await req('GET', '/admin/vendors', { token: admin.token })
+  ok('admin list shows stored rating', r.data.find((v) => v.slug === 'crunch-and-co')?.ratingCount === crunchBase.count + 1)
 
   // CORS for the native apps
   const pre = await fetch(B + '/vendors', { method: 'OPTIONS', headers: { origin: 'capacitor://localhost', 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization' } })
