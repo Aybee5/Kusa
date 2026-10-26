@@ -1,49 +1,86 @@
+import type { SearchFilters } from '#shared/types'
 import type { KusaApi } from './api'
 
-/**
- * The KusaApi contract over REST. The paths below are a proposal for the
- * backend; adjust them here when the real API is ready, and the rest of the
- * app keeps working unchanged.
- */
-export function createHttpApi(baseURL: string, getToken: () => string | null): KusaApi {
-  const call = <T>(path: string, opts: { method?: 'GET' | 'POST' | 'PATCH'; query?: Record<string, unknown>; body?: unknown } = {}) =>
-    $fetch<T>(path, {
-      baseURL,
-      method: opts.method ?? 'GET',
-      query: opts.query,
-      body: opts.body as Record<string, unknown> | undefined,
-      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : undefined,
-    })
+interface Options {
+  baseURL: string
+  getToken: () => Promise<string | null>
+  onUnauthorized: () => void
+}
+
+function messageOf(data?: { statusMessage?: string; message?: string }): string | undefined {
+  if (data?.statusMessage === 'Validation Error') {
+    try {
+      const issue = JSON.parse(data.message ?? '[]')[0] as { message?: string; path?: string[] } | undefined
+      return issue ? `Please check ${issue.path?.join('.') || 'the form'}: ${issue.message}` : undefined
+    } catch {
+      return 'Please check the form and try again.'
+    }
+  }
+  return data?.statusMessage || undefined
+}
+
+/** The Kusa API over HTTP (server/api). */
+export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): KusaApi {
+  async function call<T>(path: string, opts: { method?: 'GET' | 'POST' | 'PATCH'; query?: Record<string, unknown>; body?: object } = {}): Promise<T> {
+    const token = await getToken()
+    try {
+      return await $fetch<T>(path, {
+        baseURL,
+        method: opts.method ?? 'GET',
+        query: opts.query,
+        body: opts.body as Record<string, unknown> | undefined,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+    } catch (e) {
+      const err = e as { statusCode?: number; data?: { statusMessage?: string; message?: string } }
+      if (err.statusCode === 401 && token) onUnauthorized()
+      // Surface the server's message ("That code is not right") to the UI.
+      throw new Error(messageOf(err.data) ?? 'Something went wrong. Please check your connection and try again.', { cause: e })
+    }
+  }
+  const orNull = <T>(p: Promise<T>) => p.catch((e: Error & { cause?: { statusCode?: number } }) => {
+    if (e.cause?.statusCode === 404) return null
+    throw e
+  })
+  const searchQuery = (f: SearchFilters) => ({
+    q: f.q || undefined, category: f.category || undefined, minRating: f.minRating || undefined, openNow: f.openNow || undefined,
+    delivery: f.delivery || undefined, pickup: f.pickup || undefined, radiusKm: f.radiusKm || undefined, sort: f.sort,
+  })
 
   return {
-    searchVendors: (filters, origin) => call('/vendors', { query: { ...filters, lat: origin.lat, lng: origin.lng } }),
-    getVendor: (slug, origin) => call(`/vendors/${slug}`, { query: { ...origin } }),
+    searchVendors: (f, origin) => call('/vendors', { query: { ...searchQuery(f), ...origin } }),
+    getVendor: (slug, origin) => orNull(call(`/vendors/${encodeURIComponent(slug)}`, { query: { ...origin } })),
     listProducts: (vendorId) => call(`/vendors/${vendorId}/products`),
-    getProduct: (id, origin) => call(`/products/${id}`, { query: { ...origin } }),
+    getProduct: (id, origin) => orNull(call(`/products/${encodeURIComponent(id)}`, { query: { ...origin } })),
     latestProducts: (origin, limit) => call('/products/latest', { query: { ...origin, limit } }),
     listReviews: (vendorId) => call(`/vendors/${vendorId}/reviews`),
     myReview: (vendorId) => call(`/vendors/${vendorId}/reviews/mine`),
-    saveReview: (input) => call(`/vendors/${input.vendorId}/reviews`, { method: 'POST', body: input }),
+    saveReview: ({ vendorId, ...body }) => call(`/vendors/${vendorId}/reviews`, { method: 'POST', body }),
     reportReview: (reviewId, reason) => call(`/reviews/${reviewId}/report`, { method: 'POST', body: { reason } }),
-    recordEvent: (vendorId, event, opts) => call(`/vendors/${vendorId}/events`, { method: 'POST', body: { event, ...opts } }),
+    recordEvent: (vendorId, event, opts) => call<void>(`/vendors/${vendorId}/events`, { method: 'POST', body: { event, ...opts } }).catch(() => {}),
 
     requestCode: (phone) => call('/auth/code', { method: 'POST', body: { phone } }),
-    verifyCode: (phone, code) => call('/auth/verify', { method: 'POST', body: { phone, code } }),
+    verifyCode: (phone, code, name) => call('/auth/verify', { method: 'POST', body: { phone, code, name } }),
+    me: () => call('/auth/me'),
+    signOut: () => call<void>('/auth/logout', { method: 'POST' }).catch(() => {}),
 
-    getMyVendor: (vendorId) => call(`/me/vendor/${vendorId}`),
+    uploadPhoto: (dataUrl, kind) => call('/uploads', { method: 'POST', body: { dataUrl, kind } }),
+
+    getMyVendor: () => orNull(call('/me/vendor')),
     registerVendor: (input) => call('/me/vendor', { method: 'POST', body: input }),
-    submitVerification: (vendorId, docs) => call(`/me/vendor/${vendorId}/verification`, { method: 'POST', body: docs }),
-    getVendorStats: (vendorId) => call(`/me/vendor/${vendorId}/stats`),
-    vendorProducts: (vendorId) => call(`/me/vendor/${vendorId}/products`),
-    setProductAvailable: (productId, available) => call(`/me/products/${productId}`, { method: 'PATCH', body: { available } }),
+    submitVerification: (input) => call('/me/vendor/verification', { method: 'POST', body: input }),
+    getVendorStats: () => orNull(call('/me/vendor/stats')),
+    vendorProducts: () => call('/me/products'),
+    setProductAvailable: (id, available) => call<void>(`/me/products/${id}`, { method: 'PATCH', body: { available } }).then(() => {}),
     createProduct: (input) => call('/me/products', { method: 'POST', body: input }),
 
     adminVendors: () => call('/admin/vendors'),
-    adminVendor: (id) => call(`/admin/vendors/${id}`),
-    setVendorStatus: (id, status, reason) => call(`/admin/vendors/${id}`, { method: 'PATCH', body: { status, reason } }),
+    adminVendor: (id) => orNull(call(`/admin/vendors/${id}`)),
+    adminVendorProducts: (id) => call(`/admin/vendors/${id}/products`),
+    setVendorStatus: (id, status, reason) => call<void>(`/admin/vendors/${id}`, { method: 'PATCH', body: { status, reason } }).then(() => {}),
     adminReviews: () => call('/admin/reviews'),
-    setReviewStatus: (id, status) => call(`/admin/reviews/${id}`, { method: 'PATCH', body: { status } }),
+    setReviewStatus: (id, status) => call<void>(`/admin/reviews/${id}`, { method: 'PATCH', body: { status } }).then(() => {}),
     adminShoppers: () => call('/admin/shoppers'),
-    setShopperStatus: (id, status, reason) => call(`/admin/shoppers/${id}`, { method: 'PATCH', body: { status, reason } }),
+    setShopperStatus: (id, status, reason) => call<void>(`/admin/shoppers/${id}`, { method: 'PATCH', body: { status, reason } }).then(() => {}),
   }
 }

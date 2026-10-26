@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ShopperStatus } from '~/types'
+import type { ShopperStatus } from '#shared/types'
 import type { AdminShopper } from '~/services/api'
 
 definePageMeta({ layout: 'admin' })

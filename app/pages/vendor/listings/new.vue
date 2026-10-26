@@ -19,16 +19,16 @@ async function addPhoto() {
 async function save() {
   if (!valid.value || !user.value?.vendorId) return
   saving.value = true
-  await api.createProduct({
-    vendorId: user.value.vendorId,
-    name: name.value.trim(),
-    price: Number(price.value),
-    description: description.value.trim(),
-    image: image.value ?? undefined,
-  })
-  await refreshNuxtData('my-products')
-  toast.show('Product added')
-  await navigateTo('/vendor/listings')
+  try {
+    const imageKey = image.value ? (await api.uploadPhoto(image.value, 'product')).key : undefined
+    await api.createProduct({ name: name.value.trim(), price: Number(price.value), description: description.value.trim(), imageKey })
+    await refreshNuxtData('my-products')
+    toast.show('Product added')
+    await navigateTo('/vendor/listings')
+  } catch (e) {
+    toast.show((e as Error).message)
+    saving.value = false
+  }
 }
 
 useSeoMeta({ title: 'Add product · Kusa', robots: 'noindex' })

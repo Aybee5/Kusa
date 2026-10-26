@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { VendorWithMeta } from '~/types'
+import type { VendorWithMeta } from '#shared/types'
 defineProps<{ vendor: VendorWithMeta }>()
 </script>
 

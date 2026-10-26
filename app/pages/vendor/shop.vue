@@ -4,7 +4,7 @@ definePageMeta({ layout: 'vendor' })
 const api = useApi()
 const { user } = useRequireRole('vendor')
 const vendorId = computed(() => user.value?.vendorId ?? '')
-const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ? api.getMyVendor(vendorId.value) : Promise.resolve(null)), { watch: [vendorId], server: false })
+const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ? api.getMyVendor() : Promise.resolve(null)), { watch: [vendorId], server: false })
 
 watch(vendor, (v) => {
   if (v?.status === 'verified') navigateTo(`/v/${v.slug}`, { replace: true })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { VendorStatus } from '~/types'
+import type { VendorStatus } from '#shared/types'
 
 definePageMeta({ layout: 'admin' })
 
@@ -7,10 +7,11 @@ const route = useRoute()
 const api = useApi()
 const toast = useToast()
 const id = String(route.params.id)
+const asset = useAssetUrl()
 
 const { data: vendor, refresh } = await useAsyncData(`admin-vendor-${id}`, () => api.adminVendor(id))
 if (!vendor.value) throw createError({ statusCode: 404, statusMessage: 'Vendor not found', fatal: true })
-const { data: products } = await useAsyncData(`admin-vendor-products-${id}`, () => api.vendorProducts(id))
+const { data: products } = await useAsyncData(`admin-vendor-products-${id}`, () => api.adminVendorProducts(id))
 
 const checks = reactive({ phone: true, name: false, face: false, place: false })
 const checkList = [
@@ -33,7 +34,7 @@ const decisionText: Partial<Record<VendorStatus, string>> = {
 const before = vendor.value.status
 
 async function decide(status: VendorStatus) {
-  await api.setVendorStatus(id, status, status === 'suspended' ? suspendReason.value || 'Other' : undefined)
+  await api.setVendorStatus(id, status, status === 'suspended' ? suspendReason.value || 'Other' : status === 'changes' || status === 'rejected' ? note.value.trim() || undefined : undefined)
   decision.value = status
   await Promise.all([refresh(), refreshNuxtData(['admin-counts', 'admin-vendors'])])
   toast.show(decisionText[status] ?? 'Saved')
@@ -91,15 +92,18 @@ useSeoMeta({ title: () => `${vendor.value?.name} · Kusa admin`, robots: 'noinde
           <h2 class="text-[17px] font-bold">Documents</h2>
           <div class="grid grid-cols-3 gap-2.5">
             <figure class="flex flex-col gap-1.5">
-              <div class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">{{ vendor.documents.idType || 'Not uploaded' }}</div>
-              <figcaption class="text-[13px] font-semibold">Government ID</figcaption>
+              <a v-if="vendor.documentUrls?.id" :href="asset(vendor.documentUrls.id)" target="_blank" rel="noopener" class="block h-[150px] overflow-hidden rounded-xl bg-[#ECE6D8]"><img :src="asset(vendor.documentUrls.id)" :alt="`${vendor.documents.idType} photo`" class="size-full object-cover" /></a>
+              <div v-else class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">Not uploaded</div>
+              <figcaption class="text-[13px] font-semibold">Government ID<span v-if="vendor.documents.idType" class="font-normal text-muted"> · {{ vendor.documents.idType }}</span></figcaption>
             </figure>
             <figure class="flex flex-col gap-1.5">
-              <div class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">{{ vendor.documents.hasSelfie ? 'Selfie with ID' : 'Not uploaded' }}</div>
+              <a v-if="vendor.documentUrls?.selfie" :href="asset(vendor.documentUrls.selfie)" target="_blank" rel="noopener" class="block h-[150px] overflow-hidden rounded-xl bg-[#ECE6D8]"><img :src="asset(vendor.documentUrls.selfie)" alt="Selfie holding ID" class="size-full object-cover" /></a>
+              <div v-else class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">Not uploaded</div>
               <figcaption class="text-[13px] font-semibold">Selfie</figcaption>
             </figure>
             <figure class="flex flex-col gap-1.5">
-              <div class="photo-ph flex h-[150px] items-center justify-center rounded-xl px-2 text-center text-xs text-ink-2" :style="{ backgroundColor: vendor.coverTint }">{{ vendor.documents.hasBusinessProof ? 'Photo of business' : 'Not provided' }}</div>
+              <a v-if="vendor.documentUrls?.proof" :href="asset(vendor.documentUrls.proof)" target="_blank" rel="noopener" class="block h-[150px] overflow-hidden rounded-xl bg-[#ECE6D8]"><img :src="asset(vendor.documentUrls.proof)" alt="Proof of business" class="size-full object-cover" /></a>
+              <div v-else class="photo-ph flex h-[150px] items-center justify-center rounded-xl px-2 text-center text-xs text-ink-2" :style="{ backgroundColor: vendor.coverTint }">Not provided</div>
               <figcaption class="text-[13px] font-semibold">Proof of business</figcaption>
             </figure>
           </div>

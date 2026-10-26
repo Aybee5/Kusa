@@ -46,6 +46,8 @@ export interface Vendor {
   lng: number
   status: VendorStatus
   suspensionReason?: string
+  /** Message from the admin when changes are requested or the application is rejected. */
+  reviewNote?: string
   hours: OpeningHours
   delivery: boolean
   pickup: boolean

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CategoryId, SearchFilters, SortKey } from '~/types'
+import type { CategoryId, SearchFilters, SortKey } from '#shared/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +82,7 @@ function onSelect(id: string) {
   if (isDesktop.value) {
     document.getElementById(`result-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   } else {
-    navigateTo(`/v/${v.slug}`)
+    navigateTo({ path: `/v/${v.slug}`, query: { from: 'map' } })
   }
 }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
-const { user, signOut } = useSession()
+const { user } = useSession()
+const signOut = useSignOut()
 const items = computed(() => [
   { to: '/vendor', label: 'Home', icon: 'home', match: (p: string) => p === '/vendor' },
   { to: '/vendor/listings', label: 'Listings', icon: 'grid', match: (p: string) => p.startsWith('/vendor/listings') },
@@ -9,8 +10,7 @@ const items = computed(() => [
 ])
 
 async function out() {
-  await signOut()
-  await navigateTo('/')
+  await signOut('/')
 }
 </script>
 

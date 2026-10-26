@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Share } from '@capacitor/share'
-import type { Vendor } from '~/types'
+import type { Vendor } from '#shared/types'
 
 /** WhatsApp, call, directions and share actions, each counted in the vendor's stats. */
 export function useContact() {
@@ -20,7 +20,7 @@ export function useContact() {
   const track = (v: Vendor, event: 'whatsapp' | 'call' | 'directions') => api.recordEvent(v.id, event)
 
   async function share(title: string, path: string) {
-    const url = `${config.public.siteUrl}${path}`
+    const url = `${config.public.siteUrl}${path}${path.includes('?') ? '&' : '?'}ref=share`
     try {
       if (Capacitor.isNativePlatform()) await Share.share({ title, url, dialogTitle: 'Share' })
       else if (navigator.share) await navigator.share({ title, url })

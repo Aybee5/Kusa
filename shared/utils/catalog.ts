@@ -1,4 +1,4 @@
-import type { Category, CategoryId, OpeningHours, OpenState, RatingSummary } from '~/types'
+import type { Category, CategoryId, OpeningHours, OpenState, RatingSummary } from '../types'
 
 export const CATEGORIES: Category[] = [
   { id: 'small-chops', label: 'Small chops', tint: '#F6E3C8', dot: '#C7832C' },
@@ -104,4 +104,25 @@ export function relativeDay(iso: string, today: string): string {
 
 export function todayLagos(date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+/** Where "near me" is measured from until the shopper shares their location. */
+export const DEFAULT_LOCATION = {
+  lat: 11.9965,
+  lng: 8.531,
+  label: 'Nassarawa GRA, Kano',
+}
+
+/** Nigerian phone number in +234XXXXXXXXXX form, or null if it isn't one. */
+export function normalizeNgPhone(input: string): string | null {
+  const d = input.replace(/\D/g, '').replace(/^234/, '').replace(/^0/, '')
+  return /^[789][01]\d{8}$/.test(d) ? `+234${d}` : null
+}
+
+export function initialsOf(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || 'K'
+}
+
+export function slugify(name: string): string {
+  return name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60) || 'shop'
 }

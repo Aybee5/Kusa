@@ -1,14 +1,24 @@
 import type { KusaApi } from '~/services/api'
 import { createHttpApi } from '~/services/http'
-import { createMockApi, createMockDb, type MockDb } from '~/services/mock'
 
-/** The backend. Demo data unless NUXT_PUBLIC_API_BASE is set. */
+/** The Kusa API client, signed in when the shopper, vendor or admin is. */
 export function useApi(): KusaApi {
   const config = useRuntimeConfig()
-  if (config.public.apiBase) {
-    const token = useState<string | null>('kusa-token', () => null)
-    return createHttpApi(config.public.apiBase, () => token.value)
-  }
-  const db = useState<MockDb>('kusa-db', createMockDb)
-  return createMockApi(() => db.value)
+  const session = useSession()
+  const nuxtApp = useNuxtApp()
+  return createHttpApi({
+    baseURL: config.public.apiBase,
+    getToken: session.getToken,
+    onUnauthorized: () => {
+      // The session ended (signed out elsewhere or suspended).
+      session.clear().then(() => nuxtApp.runWithContext(() => useToast().show('Please sign in again')))
+    },
+  })
+}
+
+/** Turn an API file path (/api/files/…) into a URL that also works inside the native apps. */
+export function useAssetUrl() {
+  const base = useRuntimeConfig().public.apiBase
+  const origin = /^https?:\/\//.test(base) ? new URL(base).origin : ''
+  return (src?: string | null) => (src && src.startsWith('/api/') ? `${origin}${src}` : src ?? undefined)
 }

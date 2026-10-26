@@ -5,9 +5,9 @@ const api = useApi()
 const { user } = useRequireRole('vendor')
 const vendorId = computed(() => user.value?.vendorId ?? '')
 
-const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ? api.getMyVendor(vendorId.value) : Promise.resolve(null)), { watch: [vendorId], server: false })
-const { data: stats } = await useAsyncData('my-stats', () => (vendorId.value ? api.getVendorStats(vendorId.value) : Promise.resolve(null)), { watch: [vendorId], server: false })
-const { data: products, refresh: refreshProducts } = await useAsyncData('my-products', () => (vendorId.value ? api.vendorProducts(vendorId.value) : Promise.resolve([])), { watch: [vendorId], server: false })
+const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ? api.getMyVendor() : Promise.resolve(null)), { watch: [vendorId], server: false })
+const { data: stats } = await useAsyncData('my-stats', () => (vendorId.value ? api.getVendorStats() : Promise.resolve(null)), { watch: [vendorId], server: false })
+const { data: products, refresh: refreshProducts } = await useAsyncData('my-products', () => (vendorId.value ? api.vendorProducts() : Promise.resolve([])), { watch: [vendorId], server: false })
 const { data: rating } = await useAsyncData('my-rating', async () => {
   if (!vendor.value || vendor.value.status !== 'verified') return null
   return (await api.getVendor(vendor.value.slug, { lat: vendor.value.lat, lng: vendor.value.lng }))?.rating ?? null
@@ -97,7 +97,10 @@ useSeoMeta({ title: 'My shop · Kusa', robots: 'noindex' })
                 <span class="text-xs font-bold" :class="(kpis.visitorsChange ?? 0) >= 0 ? 'text-palm' : 'text-danger-ink'">{{ changeLabel(kpis.visitorsChange) }}</span>
               </div>
             </div>
-            <TrafficChart :days="current" />
+            <TrafficChart v-if="kpis.views" :days="current" />
+            <p v-else class="rounded-xl bg-paper px-4 py-6 text-center text-sm text-ink-2">
+              No visits yet{{ vendor.status === 'verified' ? '' : ' (your shop goes live once verified)' }}. Share your shop link on WhatsApp to get your first visitors.
+            </p>
             <div class="grid grid-cols-3 gap-2 border-t border-line-2 pt-3">
               <div class="flex flex-col gap-0.5"><span class="font-display text-[22px] font-extrabold leading-none">{{ kpis.whatsapp }}</span><span class="text-xs text-muted">WhatsApp taps</span></div>
               <div class="flex flex-col gap-0.5"><span class="font-display text-[22px] font-extrabold leading-none">{{ kpis.calls }}</span><span class="text-xs text-muted">Calls</span></div>

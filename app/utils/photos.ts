@@ -29,10 +29,29 @@ export async function pickPhoto(source: 'camera' | 'library' | 'prompt' = 'promp
       const file = input.files?.[0]
       if (!file) return resolve(null)
       const reader = new FileReader()
-      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+      reader.onload = () => (typeof reader.result === 'string' ? shrinkPhoto(reader.result).then(resolve) : resolve(null))
       reader.onerror = () => resolve(null)
       reader.readAsDataURL(file)
     }
     input.click()
+  })
+}
+
+/** Scale a photo down to at most `max` px on its longest side as a JPEG, to keep uploads small on mobile data. */
+export function shrinkPhoto(dataUrl: string, max = 1600, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return resolve(dataUrl)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
   })
 }

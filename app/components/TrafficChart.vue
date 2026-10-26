@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DailyStat } from '~/types'
+import type { DailyStat } from '#shared/types'
 
 const props = defineProps<{ days: DailyStat[] }>()
 

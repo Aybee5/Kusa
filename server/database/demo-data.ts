@@ -1,12 +1,8 @@
-// Demo data for running Kusa without a backend. Every business, person,
-// price and number in here is made up.
-import type { Product, Review, Shopper, Vendor, VendorStats, DailyStat } from '~/types'
-
-export const DEFAULT_LOCATION = {
-  lat: 11.9965,
-  lng: 8.531,
-  label: 'Nassarawa GRA, Kano',
-}
+// Demo data loaded by `npm run db:seed` (or SEED_DEMO_DATA=true). Every
+// business, person, price and number in here is made up.
+// Relative imports so the seed script also runs outside Nuxt.
+import type { Product, Review, Shopper, Vendor, VendorStats, DailyStat } from '../../shared/types'
+import { DEFAULT_LOCATION } from '../../shared/utils/catalog'
 
 const at = (dLatKm: number, dLngKm: number) => ({
   lat: +(DEFAULT_LOCATION.lat + dLatKm * 0.00904).toFixed(5),
@@ -47,8 +43,8 @@ export const vendors: Vendor[] = [
     about: 'Chin chin, plantain chips and coconut candy in jars and party packs.', documents: docs(),
   },
   {
-    id: 'v5', slug: 'kunu-and-zobo-hub', name: 'Kunu & Zobo Hub', ownerName: 'Aisha Bello',
-    phone: '+2348130000954', whatsapp: '2348130000954', category: 'drinks', area: 'Hotoro', city: 'Kano',
+    id: 'v5', slug: 'kunu-and-zobo-hub', name: 'Kunu & Zobo Hub', ownerName: 'Safiya Bello',
+    phone: '+2348130000955', whatsapp: '2348130000955', category: 'drinks', area: 'Hotoro', city: 'Kano',
     ...at(-0.4, 3.2), status: 'pending', hours: hours('08:00', '18:00'), delivery: true, pickup: true,
     initials: 'KZ', tint: '#F1D3DA', coverTint: '#F1D3DA', joinedAt: '2026-10-21', submittedAt: '2026-10-21',
     about: 'Fresh zobo, kunun aya and kunun gyada in 50cl and 1 litre bottles.', documents: docs("Voter's card", true, false),

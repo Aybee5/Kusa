@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CategoryId, VendorStatus } from '~/types'
+import type { CategoryId, VendorStatus } from '#shared/types'
 import type { AdminVendor } from '~/services/api'
 
 definePageMeta({ layout: 'admin' })

@@ -4,7 +4,7 @@ definePageMeta({ layout: 'vendor' })
 const api = useApi()
 const { user } = useRequireRole('vendor')
 const vendorId = computed(() => user.value?.vendorId ?? '')
-const { data: products, refresh } = await useAsyncData('my-products', () => (vendorId.value ? api.vendorProducts(vendorId.value) : Promise.resolve([])), { watch: [vendorId], server: false })
+const { data: products, refresh } = await useAsyncData('my-products', () => (vendorId.value ? api.vendorProducts() : Promise.resolve([])), { watch: [vendorId], server: false })
 
 async function toggle(id: string, available: boolean) {
   await api.setProductAvailable(id, available)

@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
-import { DEFAULT_LOCATION } from '~/services/mock/seed'
+import { DEFAULT_LOCATION } from '#shared/utils/catalog'
 import { storage } from '~/utils/storage'
 
 const KEY = 'kusa:location'

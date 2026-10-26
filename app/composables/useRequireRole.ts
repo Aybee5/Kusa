@@ -1,4 +1,4 @@
-import type { Role } from '~/types'
+import type { Role } from '#shared/types'
 
 /**
  * Sends people who aren't signed in with the right role to sign in. Runs in

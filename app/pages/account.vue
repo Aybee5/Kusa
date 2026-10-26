@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const { user, ready, signOut } = useSession()
+const { user, ready } = useSession()
+const signOut = useSignOut()
 
 async function out() {
-  await signOut()
-  await navigateTo('/')
+  await signOut('/')
 }
 
 useSeoMeta({ title: 'Account · Kusa', robots: 'noindex' })
@@ -18,12 +18,13 @@ useSeoMeta({ title: 'Account · Kusa', robots: 'noindex' })
         <span class="flex size-12 items-center justify-center rounded-full bg-palm-tint text-palm"><AppIcon name="user" :size="24" /></span>
         <div class="flex flex-col">
           <span class="text-base font-bold">{{ user.name }}</span>
-          <span class="text-sm text-muted">{{ maskPhone(user.phone) }} · {{ user.role === 'vendor' ? 'Vendor' : 'Shopper' }}</span>
+          <span class="text-sm text-muted">{{ maskPhone(user.phone) }} · {{ user.role === 'vendor' ? 'Vendor' : user.role === 'admin' ? 'Admin' : 'Shopper' }}</span>
         </div>
       </div>
       <nav class="card flex flex-col divide-y divide-line" aria-label="Account">
         <NuxtLink to="/saved" class="flex min-h-14 items-center gap-3 px-4 text-[15px] font-semibold text-ink"><AppIcon name="heart" />Saved businesses<AppIcon name="chevron-right" class="ml-auto text-muted" /></NuxtLink>
-        <NuxtLink v-if="user.role === 'vendor'" to="/vendor" class="flex min-h-14 items-center gap-3 px-4 text-[15px] font-semibold text-ink"><AppIcon name="store" />My shop dashboard<AppIcon name="chevron-right" class="ml-auto text-muted" /></NuxtLink>
+        <NuxtLink v-if="user.role === 'admin'" to="/admin" class="flex min-h-14 items-center gap-3 px-4 text-[15px] font-semibold text-ink"><AppIcon name="shield" />Admin console<AppIcon name="chevron-right" class="ml-auto text-muted" /></NuxtLink>
+        <NuxtLink v-else-if="user.role === 'vendor'" to="/vendor" class="flex min-h-14 items-center gap-3 px-4 text-[15px] font-semibold text-ink"><AppIcon name="store" />My shop dashboard<AppIcon name="chevron-right" class="ml-auto text-muted" /></NuxtLink>
         <NuxtLink v-else to="/vendor/signup" class="flex min-h-14 items-center gap-3 px-4 text-[15px] font-semibold text-ink"><AppIcon name="store" />Sell on Kusa<AppIcon name="chevron-right" class="ml-auto text-muted" /></NuxtLink>
         <button type="button" class="flex min-h-14 cursor-pointer items-center gap-3 px-4 text-left text-[15px] font-semibold text-danger-ink" @click="out"><AppIcon name="logout" />Sign out</button>
       </nav>

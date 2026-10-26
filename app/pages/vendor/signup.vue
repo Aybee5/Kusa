@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CategoryId } from '~/types'
+import type { CategoryId } from '#shared/types'
 
 definePageMeta({ layout: 'bare' })
 
@@ -17,18 +17,22 @@ const ownerName = ref('')
 const phone = ref('')
 const code = ref('')
 const codeSent = ref(false)
+const devCode = ref<string | null>(null)
 const digits = computed(() => phone.value.replace(/\D/g, '').replace(/^234/, '').replace(/^0/, ''))
 
 // Step 2: business
 const biz = reactive({ name: '', category: 'small-chops' as CategoryId, whatsapp: '', landmark: '', delivery: true, pickup: true })
 const pinned = ref(false)
 
-// Step 3: verification
-const idTypes = ['NIN slip', "Voter's card", "Driver's licence", 'International passport']
-const idType = ref(idTypes[0]!)
-const idPhoto = ref<string | null>(null)
-const selfie = ref<string | null>(null)
-const proof = ref<string | null>(null)
+// Step 3: verification. Photos upload as soon as they're taken; we keep the preview and the stored key.
+const idTypes = ['NIN slip', "Voter's card", "Driver's licence", 'International passport'] as const
+const idType = ref<(typeof idTypes)[number]>(idTypes[0])
+type Shot = { preview: string; key: string | null; uploading: boolean }
+const shots = reactive<Record<'id' | 'selfie' | 'proof', Shot | null>>({ id: null, selfie: null, proof: null })
+const idPhoto = computed(() => shots.id?.preview ?? null)
+const selfie = computed(() => shots.selfie?.preview ?? null)
+const proof = computed(() => shots.proof?.preview ?? null)
+const uploadsDone = computed(() => !!shots.id?.key && !!shots.selfie?.key && !(shots.proof && !shots.proof.key))
 
 watch(session.ready, (ready) => {
   if (!ready) return
@@ -44,32 +48,32 @@ watch(session.ready, (ready) => {
   }
 }, { immediate: true })
 
-async function sendCode() {
-  busy.value = true
-  await api.requestCode(`+234${digits.value}`)
-  codeSent.value = true
-  busy.value = false
-}
-
-async function verifyPhone() {
+async function run(fn: () => Promise<void>) {
   busy.value = true
   error.value = null
   try {
-    const u = await api.verifyCode(`+234${digits.value}`, code.value)
-    if (u.role === 'vendor') {
-      await session.signIn(u)
-      await navigateTo('/vendor', { replace: true })
-      return
-    }
-    await session.signIn({ ...u, name: ownerName.value.trim() || u.name })
-    biz.whatsapp = digits.value
-    step.value = 2
+    await fn()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     busy.value = false
   }
 }
+
+const sendCode = () => run(async () => {
+  const res = await api.requestCode(`+234${digits.value}`)
+  devCode.value = res.devCode ?? null
+  codeSent.value = true
+})
+
+const verifyPhone = () => run(async () => {
+  const { user, token } = await api.verifyCode(`+234${digits.value}`, code.value, ownerName.value.trim())
+  await session.signIn(user, token)
+  if (user.role === 'vendor') return void (await navigateTo('/vendor', { replace: true }))
+  if (user.role === 'admin') throw new Error('This number belongs to an admin account. Use a different number to register a business.')
+  biz.whatsapp = digits.value
+  step.value = 2
+})
 
 async function pinLocation() {
   await locate()
@@ -78,44 +82,44 @@ async function pinLocation() {
 
 const step2Valid = computed(() => biz.name.trim().length > 1 && biz.whatsapp.replace(/\D/g, '').length >= 10 && (biz.delivery || biz.pickup))
 
-async function saveBusiness() {
+const saveBusiness = () => run(async () => {
   if (!step2Valid.value) return
-  busy.value = true
-  const u = session.user.value!
-  const vendor = await api.registerVendor({
+  const { user } = await api.registerVendor({
     name: biz.name.trim(),
     category: biz.category,
-    whatsapp: `234${biz.whatsapp.replace(/\D/g, '').replace(/^234/, '').replace(/^0/, '')}`,
+    whatsapp: biz.whatsapp,
     landmark: biz.landmark.trim(),
     lat: location.value.lat,
     lng: location.value.lng,
     delivery: biz.delivery,
     pickup: biz.pickup,
-    ownerName: u.name,
   })
-  await session.signIn({ ...u, id: vendor.id, role: 'vendor', vendorId: vendor.id })
-  busy.value = false
+  await session.update(user)
   step.value = 3
-}
+})
 
 async function take(target: 'id' | 'selfie' | 'proof', source: 'camera' | 'library') {
   const photo = await pickPhoto(source)
   if (!photo) return
-  if (target === 'id') idPhoto.value = photo
-  else if (target === 'selfie') selfie.value = photo
-  else proof.value = photo
+  const shot: Shot = reactive({ preview: photo, key: null, uploading: true })
+  shots[target] = shot
+  error.value = null
+  try {
+    shot.key = (await api.uploadPhoto(photo, 'verification')).key
+  } catch (e) {
+    shots[target] = null
+    error.value = (e as Error).message
+  } finally {
+    shot.uploading = false
+  }
 }
 
-async function submit() {
-  const vendorId = session.user.value?.vendorId
-  if (!vendorId || !idPhoto.value || !selfie.value) return
-  busy.value = true
-  // A real backend receives the photos here and stores them privately.
-  await api.submitVerification(vendorId, { idType: idType.value, hasSelfie: true, hasBusinessProof: !!proof.value })
+const submit = () => run(async () => {
+  if (!shots.id?.key || !shots.selfie?.key) return
+  await api.submitVerification({ idType: idType.value, idPhotoKey: shots.id.key, selfieKey: shots.selfie.key, proofKey: shots.proof?.key ?? undefined })
   await refreshNuxtData('my-vendor')
-  busy.value = false
   await navigateTo('/vendor')
-}
+})
 
 useSeoMeta({ title: 'Sell on Kusa', robots: 'noindex' })
 </script>
@@ -154,9 +158,8 @@ useSeoMeta({ title: 'Sell on Kusa', robots: 'noindex' })
         <div v-if="codeSent" class="flex flex-col gap-1.5">
           <label for="vcode" class="label">6-digit code we texted you</label>
           <input id="vcode" v-model="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" class="field text-center text-xl tracking-[0.4em]" />
-          <span class="text-xs text-muted">Demo code: 123456</span>
+          <span v-if="devCode" class="text-xs text-muted">Development mode: your code is {{ devCode }}</span>
         </div>
-        <p v-if="error" class="text-sm text-danger-ink" role="alert">{{ error }}</p>
       </template>
 
       <!-- Step 2 -->
@@ -255,13 +258,14 @@ useSeoMeta({ title: 'Sell on Kusa', robots: 'noindex' })
     </div>
 
     <div class="pb-safe sticky bottom-0 bg-paper px-5 pt-3 lg:px-8 lg:pb-6">
+      <p v-if="error" class="pb-2 text-sm text-danger-ink" role="alert">{{ error }}</p>
       <div class="pb-3 lg:pb-0">
         <template v-if="step === 1">
           <button v-if="!codeSent" type="button" class="btn-dark h-[54px] w-full text-base" :disabled="digits.length !== 10 || !ownerName.trim() || busy" @click="sendCode">{{ busy ? 'Sending…' : 'Send code' }}</button>
           <button v-else type="button" class="btn-dark h-[54px] w-full text-base" :disabled="code.length !== 6 || busy" @click="verifyPhone">{{ busy ? 'Checking…' : 'Continue' }}</button>
         </template>
         <button v-else-if="step === 2" type="button" class="btn-dark h-[54px] w-full text-base" :disabled="!step2Valid || busy" @click="saveBusiness">{{ busy ? 'Saving…' : 'Continue to verification' }}</button>
-        <button v-else type="button" class="btn-dark h-[54px] w-full text-base" :disabled="!idPhoto || !selfie || busy" @click="submit">{{ busy ? 'Submitting…' : 'Submit for review' }}</button>
+        <button v-else type="button" class="btn-dark h-[54px] w-full text-base" :disabled="!uploadsDone || busy" @click="submit">{{ busy ? 'Submitting…' : !uploadsDone && (idPhoto || selfie) ? 'Uploading photos…' : 'Submit for review' }}</button>
       </div>
     </div>
   </div>

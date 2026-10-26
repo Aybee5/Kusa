@@ -23,7 +23,7 @@ const tagOptions = computed(() => reviewTagsFor(vendor.value!.category))
 watch([ready, user], async () => {
   if (!ready.value) return
   if (!user.value) return navigateTo({ path: '/signin', query: { redirect: route.fullPath } }, { replace: true })
-  const mine = await api.myReview(vendor.value!.id, user.value.id)
+  const mine = await api.myReview(vendor.value!.id)
   if (mine) {
     stars.value = mine.stars
     tags.value = [...mine.tags]
@@ -39,7 +39,13 @@ function toggleTag(t: string) {
 async function submit() {
   if (!user.value || !stars.value) return
   saving.value = true
-  await api.saveReview({ vendorId: vendor.value!.id, shopperId: user.value.id, stars: stars.value, tags: tags.value, text: text.value.trim() })
+  try {
+    await api.saveReview({ vendorId: vendor.value!.id, stars: stars.value, tags: tags.value, text: text.value.trim() })
+  } catch (e) {
+    saving.value = false
+    useToast().show((e as Error).message)
+    return
+  }
   await refreshNuxtData([`vendor-${slug}`, `vendor-reviews-${slug}`])
   saving.value = false
   sent.value = true

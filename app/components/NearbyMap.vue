@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Always render inside <ClientOnly>: Leaflet needs the browser.
 import type * as Leaflet from 'leaflet'
-import type { VendorWithMeta } from '~/types'
+import type { VendorWithMeta } from '#shared/types'
 
 let L: typeof Leaflet
 
