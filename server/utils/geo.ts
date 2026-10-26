@@ -54,7 +54,13 @@ export function withinRadius(origin: LatLng, radiusKm: number): SQL[] {
   ]
 }
 
-/** ORDER BY nearest first, when the database can do it with an index. */
-export function nearestFirst(origin: LatLng): SQL | null {
-  return active === 'postgis' ? sql`geog <-> ${point(origin)}` : null
+/**
+ * ORDER BY nearest first, so the row limit keeps the closest businesses.
+ * PostGIS uses the spatial index (KNN). Basic mode sorts by a flat-earth
+ * approximation, which ranks identically to true distance at city scale.
+ */
+export function nearestFirst(origin: LatLng): SQL {
+  if (active === 'postgis') return sql`geog <-> ${point(origin)}`
+  const k = Math.cos((origin.lat * Math.PI) / 180)
+  return sql`(lat - ${origin.lat}) ^ 2 + ((lng - ${origin.lng}) * ${k}) ^ 2`
 }
