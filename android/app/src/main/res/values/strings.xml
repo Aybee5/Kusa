@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kusa</string>
+    <string name="title_activity_main">Kusa</string>
+    <string name="package_name">ng.kusa.app</string>
+    <string name="custom_url_scheme">ng.kusa.app</string>
+</resources>

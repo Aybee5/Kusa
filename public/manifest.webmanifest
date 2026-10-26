@@ -1,0 +1,12 @@
+{
+  "name": "Kusa · Find small businesses near you",
+  "short_name": "Kusa",
+  "description": "Find verified small businesses near you and reach them on WhatsApp.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF6EE",
+  "theme_color": "#0B6E4F",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
