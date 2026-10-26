@@ -12,7 +12,7 @@ const Body = z.object({
 export default defineEventHandler(async (event) => {
   const { user, vendor } = await requireVendor(event)
   if (vendor.status === 'verified' || vendor.status === 'suspended') {
-    throw createError({ statusCode: 400, statusMessage: 'This business doesn’t need verifying right now' })
+    throw createError({ statusCode: 400, message: 'This business doesn’t need verifying right now' })
   }
   const body = await readValidatedBody(event, Body.parse)
   for (const key of [body.idPhotoKey, body.selfieKey, body.proofKey]) assertOwnKey(key, 'verification', user.id)

@@ -1,7 +1,7 @@
-import { and, eq, gte, ilike, inArray, lte, ne, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, ilike, inArray, ne, or, sql, type SQL } from 'drizzle-orm'
 import type { CategoryId, Product, RatingSummary, SearchFilters, Vendor, VendorWithMeta } from '#shared/types'
 import type { LatLng } from '#shared/types/api'
-import { CATEGORIES, DEFAULT_LOCATION, emptyRating, haversineKm, initialsOf, openStateFor } from '#shared/utils/catalog'
+import { CATEGORIES, emptyRating, haversineKm, initialsOf, openStateFor } from '#shared/utils/catalog'
 import type { ProductRow, VendorRow } from '../database/schema'
 
 const isoDate = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : undefined)
@@ -94,7 +94,7 @@ async function productSummaries(vendorIds: string[]) {
   return out
 }
 
-export async function withMeta(rows: VendorRow[], origin: LatLng): Promise<VendorWithMeta[]> {
+export async function withMeta(rows: VendorRow[], origin: LatLng | null): Promise<VendorWithMeta[]> {
   const ids = rows.map((r) => r.id)
   const [ratings, prods, owners] = await Promise.all([
     ratingSummaries(ids),
@@ -107,7 +107,7 @@ export async function withMeta(rows: VendorRow[], origin: LatLng): Promise<Vendo
   return rows.map((r) => ({
     ...toVendor(r, ownerName.get(r.ownerId)),
     rating: ratings.get(r.id) ?? emptyRating(),
-    distanceKm: haversineKm(origin, r),
+    distanceKm: origin ? haversineKm(origin, r) : null,
     openState: openStateFor({ opens: r.opens, closes: r.closes, closedDays: r.closedDays }),
     productCount: prods.get(r.id)?.count ?? 0,
     fromPrice: prods.get(r.id)?.fromPrice ?? null,
@@ -123,18 +123,18 @@ export async function findPublicVendor(key: string): Promise<VendorRow | null> {
   return v ?? null
 }
 
-export async function searchVendors(f: SearchFilters, origin: LatLng): Promise<VendorWithMeta[]> {
+/**
+ * Search verified businesses. With an origin, results can be limited to a
+ * radius and sorted nearest first; without one ("browse anywhere") there's no
+ * distance and "nearest" falls back to top rated.
+ */
+export async function searchVendors(f: SearchFilters, origin: LatLng | null): Promise<VendorWithMeta[]> {
   const { vendors, products } = schema
   const where: SQL[] = [eq(vendors.status, 'verified')]
   if (f.category) where.push(eq(vendors.category, f.category))
   if (f.delivery) where.push(eq(vendors.delivery, true))
   if (f.pickup) where.push(eq(vendors.pickup, true))
-  if (f.radiusKm) {
-    // Cheap bounding box first (indexed), exact distance below.
-    const dLat = f.radiusKm / 111
-    const dLng = f.radiusKm / (111 * Math.cos((origin.lat * Math.PI) / 180))
-    where.push(gte(vendors.lat, origin.lat - dLat), lte(vendors.lat, origin.lat + dLat), gte(vendors.lng, origin.lng - dLng), lte(vendors.lng, origin.lng + dLng))
-  }
+  if (origin && f.radiusKm) where.push(...withinRadius(origin, f.radiusKm))
   const q = f.q.trim()
   if (q) {
     const like = `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%`
@@ -146,20 +146,25 @@ export async function searchVendors(f: SearchFilters, origin: LatLng): Promise<V
       sql`exists (select 1 from ${products} p where p.vendor_id = ${vendors.id} and (p.name ilike ${like} or p.description ilike ${like}))`,
     )!)
   }
-  const rows = await useDb().select().from(vendors).where(and(...where)).limit(500)
+  const nearest = origin ? nearestFirst(origin) : null
+  const base = useDb().select().from(vendors).where(and(...where))
+  const rows = await (nearest ? base.orderBy(nearest) : base).limit(500)
   let list = await withMeta(rows, origin)
   list = list
-    .filter((v) => !f.radiusKm || v.distanceKm <= f.radiusKm)
+    .filter((v) => !origin || !f.radiusKm || (v.distanceKm ?? 0) <= f.radiusKm)
     .filter((v) => !f.minRating || v.rating.average >= f.minRating)
     .filter((v) => !f.openNow || v.openState.open)
+  const dist = (v: VendorWithMeta) => v.distanceKm ?? 0
+  const byRating = (a: VendorWithMeta, b: VendorWithMeta) => b.rating.average - a.rating.average || b.rating.count - a.rating.count
   return list.sort((a, b) =>
-    f.sort === 'top-rated' ? b.rating.average - a.rating.average || b.rating.count - a.rating.count || a.distanceKm - b.distanceKm : a.distanceKm - b.distanceKm,
+    f.sort === 'nearest' && origin ? dist(a) - dist(b) : byRating(a, b) || dist(a) - dist(b),
   ).slice(0, 100)
 }
 
-/** Origin from ?lat=&lng= query params, falling back to central Kano. */
-export function originFrom(query: Record<string, unknown>): LatLng {
+/** Origin from ?lat=&lng= query params, or null to browse without distances. */
+export function originFrom(query: Record<string, unknown>): LatLng | null {
+  if (query.lat == null || query.lng == null || query.lat === '' || query.lng === '') return null
   const lat = Number(query.lat)
   const lng = Number(query.lng)
-  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : { lat: DEFAULT_LOCATION.lat, lng: DEFAULT_LOCATION.lng }
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null
 }

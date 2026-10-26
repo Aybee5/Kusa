@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CategoryId } from '#shared/types'
+import type { LatLng } from '#shared/types/api'
 
 definePageMeta({ layout: 'bare' })
 
@@ -21,8 +22,11 @@ const devCode = ref<string | null>(null)
 const digits = computed(() => phone.value.replace(/\D/g, '').replace(/^234/, '').replace(/^0/, ''))
 
 // Step 2: business
-const biz = reactive({ name: '', category: 'small-chops' as CategoryId, whatsapp: '', landmark: '', delivery: true, pickup: true })
-const pinned = ref(false)
+const biz = reactive({ name: '', category: 'small-chops' as CategoryId, whatsapp: '', area: '', city: 'Kano', landmark: '', delivery: true, pickup: true })
+// Where the business is. Set from the phone's location or by tapping the map,
+// so vendors who don't want to share their location can still be found.
+const shop = ref<LatLng | null>(null)
+const mapCenter = computed<LatLng>(() => ({ lat: location.value.lat, lng: location.value.lng }))
 
 // Step 3: verification. Photos upload as soon as they're taken; we keep the preview and the stored key.
 const idTypes = ['NIN slip', "Voter's card", "Driver's licence", 'International passport'] as const
@@ -76,11 +80,20 @@ const verifyPhone = () => run(async () => {
 })
 
 async function pinLocation() {
-  await locate()
-  pinned.value = location.value.source === 'device'
+  const p = await locate()
+  if (p) shop.value = p
 }
 
-const step2Valid = computed(() => biz.name.trim().length > 1 && biz.whatsapp.replace(/\D/g, '').length >= 10 && (biz.delivery || biz.pickup))
+const step2Valid = computed(() =>
+  biz.name.trim().length > 1 && biz.whatsapp.replace(/\D/g, '').length >= 10 && biz.area.trim().length > 1 && biz.city.trim().length > 1 && !!shop.value && (biz.delivery || biz.pickup))
+const missing = computed(() => {
+  if (biz.name.trim().length < 2) return 'Add your business name'
+  if (biz.whatsapp.replace(/\D/g, '').length < 10) return 'Add your WhatsApp number'
+  if (biz.area.trim().length < 2) return 'Add your area'
+  if (!shop.value) return 'Mark your location on the map'
+  if (!biz.delivery && !biz.pickup) return 'Choose pickup, delivery or both'
+  return ''
+})
 
 const saveBusiness = () => run(async () => {
   if (!step2Valid.value) return
@@ -88,9 +101,11 @@ const saveBusiness = () => run(async () => {
     name: biz.name.trim(),
     category: biz.category,
     whatsapp: biz.whatsapp,
+    area: biz.area.trim(),
+    city: biz.city.trim(),
     landmark: biz.landmark.trim(),
-    lat: location.value.lat,
-    lng: location.value.lng,
+    lat: shop.value!.lat,
+    lng: shop.value!.lng,
     delivery: biz.delivery,
     pickup: biz.pickup,
   })
@@ -187,14 +202,31 @@ useSeoMeta({ title: 'Sell on Kusa', robots: 'noindex' })
             </div>
           </div>
         </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="area" class="label">Area / neighbourhood</label>
+            <input id="area" v-model="biz.area" type="text" autocomplete="address-level3" placeholder="e.g. Tarauni" class="field" />
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="city" class="label">City</label>
+            <input id="city" v-model="biz.city" type="text" autocomplete="address-level2" placeholder="e.g. Kano" class="field" />
+          </div>
+        </div>
         <div class="flex flex-col gap-1.5">
-          <span class="label">Where are you based?</span>
-          <button type="button" class="flex min-h-12 cursor-pointer items-center gap-2.5 rounded-2xl border-[1.5px] px-3.5 text-left text-sm font-bold" :class="pinned ? 'border-palm bg-palm-tint text-palm' : 'border-line bg-surface text-palm'" :disabled="locating" @click="pinLocation">
-            <AppIcon :name="pinned ? 'check' : 'target'" :size="18" />
-            {{ locating ? 'Finding you…' : pinned ? 'Location pinned' : 'Use my current location' }}
-          </button>
+          <span class="label">Where shoppers can find you</span>
+          <p class="text-[13px] text-muted">Tap the map or drag the pin to your shop, stall or kitchen. Sharing your phone's location is optional.</p>
+          <div class="relative h-[200px] overflow-hidden rounded-2xl border border-[#E0D8C6]">
+            <ClientOnly>
+              <PinPicker v-model="shop" :center="mapCenter" />
+              <template #fallback><div class="size-full bg-[#ECE6D8]" /></template>
+            </ClientOnly>
+            <button type="button" class="absolute bottom-2.5 left-2.5 z-[1000] flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-bold text-palm shadow" :disabled="locating" @click="pinLocation">
+              <AppIcon name="target" :size="16" />{{ locating ? 'Finding you…' : 'Use my current location' }}
+            </button>
+            <span v-if="shop" class="absolute right-2.5 top-2.5 z-[1000] flex h-8 items-center gap-1 rounded-full bg-palm px-2.5 text-xs font-bold text-white"><AppIcon name="check" :size="14" />Pinned</span>
+          </div>
           <label for="landmark" class="sr-only">Street or landmark</label>
-          <input id="landmark" v-model="biz.landmark" type="text" placeholder="Street or landmark, e.g. beside Tarauni market" class="field" />
+          <input id="landmark" v-model="biz.landmark" type="text" placeholder="Street or landmark (optional), e.g. beside Tarauni market" class="field" />
         </div>
         <fieldset class="flex flex-col gap-2">
           <legend class="label pb-2">How do customers get your products?</legend>
@@ -264,7 +296,7 @@ useSeoMeta({ title: 'Sell on Kusa', robots: 'noindex' })
           <button v-if="!codeSent" type="button" class="btn-dark h-[54px] w-full text-base" :disabled="digits.length !== 10 || !ownerName.trim() || busy" @click="sendCode">{{ busy ? 'Sending…' : 'Send code' }}</button>
           <button v-else type="button" class="btn-dark h-[54px] w-full text-base" :disabled="code.length !== 6 || busy" @click="verifyPhone">{{ busy ? 'Checking…' : 'Continue' }}</button>
         </template>
-        <button v-else-if="step === 2" type="button" class="btn-dark h-[54px] w-full text-base" :disabled="!step2Valid || busy" @click="saveBusiness">{{ busy ? 'Saving…' : 'Continue to verification' }}</button>
+        <button v-else-if="step === 2" type="button" class="btn-dark h-[54px] w-full text-base" :disabled="!step2Valid || busy" @click="saveBusiness">{{ busy ? 'Saving…' : missing || 'Continue to verification' }}</button>
         <button v-else type="button" class="btn-dark h-[54px] w-full text-base" :disabled="!uploadsDone || busy" @click="submit">{{ busy ? 'Submitting…' : !uploadsDone && (idPhoto || selfie) ? 'Uploading photos…' : 'Submit for review' }}</button>
       </div>
     </div>

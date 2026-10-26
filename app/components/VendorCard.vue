@@ -11,7 +11,7 @@ defineProps<{ vendor: VendorWithMeta }>()
         <span class="truncate">{{ vendor.name }}</span>
         <VerifiedBadge />
       </div>
-      <div class="text-[13px] text-muted lg:text-sm">{{ categoryLabel(vendor.category) }} · {{ formatKm(vendor.distanceKm) }}</div>
+      <div class="text-[13px] text-muted lg:text-sm">{{ [categoryLabel(vendor.category), vendor.distanceKm != null ? formatKm(vendor.distanceKm) : vendor.area].join(' · ') }}</div>
       <div class="flex items-center gap-2 text-[13px] lg:text-sm">
         <RatingInline :rating="vendor.rating" />
         <span class="font-semibold" :class="vendor.openState.open ? (vendor.openState.closingSoon ? 'text-amber-ink' : 'text-palm') : 'text-muted'">

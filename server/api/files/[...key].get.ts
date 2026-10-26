@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const isPublic = key.startsWith('product/')
   if (!isPublic) {
     const q = getQuery(event)
-    if (!checkFileSignature(key, q.exp, q.sig)) throw createError({ statusCode: 403, statusMessage: 'This link has expired' })
+    if (!checkFileSignature(key, q.exp, q.sig)) throw createError({ statusCode: 403, message: 'This link has expired' })
   }
   const data = await uploads().getItemRaw(key)
   if (!data) throw createError({ statusCode: 404 })

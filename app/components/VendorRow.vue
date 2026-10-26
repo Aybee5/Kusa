@@ -20,7 +20,8 @@ defineProps<{ vendor: VendorWithMeta; active?: boolean }>()
         <span class="truncate">· {{ vendor.area }}</span>
       </div>
       <div class="flex items-center gap-2.5 text-[13px]">
-        <span class="flex items-center gap-0.5 font-bold"><AppIcon name="pin" :size="14" />{{ formatKm(vendor.distanceKm) }}</span>
+        <span v-if="vendor.distanceKm != null" class="flex items-center gap-0.5 font-bold"><AppIcon name="pin" :size="14" />{{ formatKm(vendor.distanceKm) }}</span>
+        <span v-else class="flex items-center gap-0.5 font-bold"><AppIcon name="pin" :size="14" />{{ vendor.city }}</span>
         <span class="truncate font-semibold" :class="vendor.openState.open ? (vendor.openState.closingSoon ? 'text-amber-ink' : 'text-palm') : 'text-muted'">
           {{ vendor.openState.label }}
         </span>

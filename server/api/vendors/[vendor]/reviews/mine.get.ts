@@ -5,7 +5,7 @@ import type { Review } from '#shared/types'
 export default defineEventHandler(async (event): Promise<Review | null> => {
   const user = await requireUser(event)
   const v = await findPublicVendor(getRouterParam(event, 'vendor')!)
-  if (!v) throw createError({ statusCode: 404, statusMessage: 'Business not found' })
+  if (!v) throw createError({ statusCode: 404, message: 'Business not found' })
   const [r] = await useDb().select().from(schema.reviews).where(and(eq(schema.reviews.vendorId, v.id), eq(schema.reviews.userId, user.id))).limit(1)
   return r ? toReview(r) : null
 })

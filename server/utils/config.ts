@@ -22,6 +22,7 @@ export function serverConfig() {
       channel: env.TERMII_CHANNEL ?? 'dnd',
     },
     adminPhones: (env.ADMIN_PHONES ?? '').split(',').map((p) => normalizeNgPhone(p)).filter((p): p is string => !!p),
+    geoSearch: (env.GEO_SEARCH === 'postgis' ? 'postgis' : 'basic') as 'basic' | 'postgis',
     seedDemoData: env.SEED_DEMO_DATA ? env.SEED_DEMO_DATA === 'true' : dev,
     corsOrigins: (env.CORS_ORIGINS ?? 'capacitor://localhost,http://localhost,https://localhost').split(',').map((o) => o.trim()).filter(Boolean),
     s3: {
@@ -37,6 +38,6 @@ export function serverConfig() {
 
 export function requireSecret(): string {
   const secret = serverConfig().authSecret
-  if (!secret) throw createError({ statusCode: 500, statusMessage: 'AUTH_SECRET is not set on the server' })
+  if (!secret) throw createError({ statusCode: 500, message: 'AUTH_SECRET is not set on the server' })
   return secret
 }

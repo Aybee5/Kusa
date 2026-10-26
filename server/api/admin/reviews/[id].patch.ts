@@ -12,6 +12,6 @@ export default defineEventHandler(async (event) => {
     ...(status === 'hidden' ? { flagReason: `Hidden by admin (${admin.name || 'admin'})` } : {}),
     ...(status === 'published' ? { flagReason: null } : {}),
   }).where(eq(schema.reviews.id, getRouterParam(event, 'id')!)).returning()
-  if (!row) throw createError({ statusCode: 404, statusMessage: 'Review not found' })
+  if (!row) throw createError({ statusCode: 404, message: 'Review not found' })
   return toReview(row)
 })

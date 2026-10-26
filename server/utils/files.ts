@@ -13,11 +13,11 @@ export const uploads = () => useStorage('uploads')
 /** Decode a data URL, check it really is a JPEG, PNG or WebP image, and store it. */
 export async function storeImage(dataUrl: string, kind: UploadKind, userId: string): Promise<string> {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl)
-  if (!m) throw createError({ statusCode: 400, statusMessage: 'Upload a JPEG, PNG or WebP photo' })
+  if (!m) throw createError({ statusCode: 400, message: 'Upload a JPEG, PNG or WebP photo' })
   const type = TYPES[m[1]!]!
   const buf = Buffer.from(m[2]!, 'base64')
-  if (buf.length > MAX_UPLOAD_BYTES) throw createError({ statusCode: 413, statusMessage: 'That photo is too large (max 6 MB)' })
-  if (!type.magic(buf)) throw createError({ statusCode: 400, statusMessage: 'That file isn’t a valid image' })
+  if (buf.length > MAX_UPLOAD_BYTES) throw createError({ statusCode: 413, message: 'That photo is too large (max 6 MB)' })
+  if (!type.magic(buf)) throw createError({ statusCode: 400, message: 'That file isn’t a valid image' })
   const key = `${kind}/${userId}/${randomUUID()}.${type.ext}`
   await uploads().setItemRaw(key, buf)
   return key
@@ -46,5 +46,5 @@ export function checkFileSignature(key: string, exp: unknown, sig: unknown): boo
 
 /** Uploaded keys must belong to the person using them. */
 export function assertOwnKey(key: string | undefined, kind: UploadKind, userId: string) {
-  if (key && !key.startsWith(`${kind}/${userId}/`)) throw createError({ statusCode: 400, statusMessage: 'Invalid photo reference' })
+  if (key && !key.startsWith(`${kind}/${userId}/`)) throw createError({ statusCode: 400, message: 'Invalid photo reference' })
 }

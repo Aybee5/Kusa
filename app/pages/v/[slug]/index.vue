@@ -97,7 +97,7 @@ useSeoMeta({
             <span v-if="vendor.rating.count"><strong>{{ vendor.rating.average.toFixed(1) }}</strong> · <span class="underline">{{ vendor.rating.count }} ratings</span></span>
             <span v-else class="underline">No ratings yet</span>
           </button>
-          <div class="flex items-center gap-2"><AppIcon name="pin" :size="18" class="text-muted" /><span>{{ vendor.area }}, {{ vendor.city }} · <strong>{{ formatKm(vendor.distanceKm) }} away</strong></span></div>
+          <div class="flex items-center gap-2"><AppIcon name="pin" :size="18" class="text-muted" /><span>{{ vendor.area }}, {{ vendor.city }}<template v-if="vendor.distanceKm != null"> · <strong>{{ formatKm(vendor.distanceKm) }} away</strong></template></span></div>
           <div class="flex items-center gap-2"><AppIcon name="clock" :size="18" class="text-muted" />
             <span :class="vendor.openState.open ? 'font-bold text-palm' : 'text-ink-2'">{{ vendor.openState.label }}</span>
           </div>

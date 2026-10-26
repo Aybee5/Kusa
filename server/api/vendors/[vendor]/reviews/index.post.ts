@@ -16,8 +16,8 @@ export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const body = await readValidatedBody(event, Body.parse)
   const v = await findPublicVendor(getRouterParam(event, 'vendor')!)
-  if (!v) throw createError({ statusCode: 404, statusMessage: 'Business not found' })
-  if (v.ownerId === user.id) throw createError({ statusCode: 403, statusMessage: 'You can’t rate your own business' })
+  if (!v) throw createError({ statusCode: 404, message: 'Business not found' })
+  if (v.ownerId === user.id) throw createError({ statusCode: 403, message: 'You can’t rate your own business' })
 
   const db = useDb()
   const { reviews } = schema

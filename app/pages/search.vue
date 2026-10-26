@@ -4,7 +4,7 @@ import type { CategoryId, SearchFilters, SortKey } from '#shared/types'
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
-const { origin, location } = useLocation()
+const { origin, location, choosePoint } = useLocation()
 
 const str = (v: unknown, d = '') => (typeof v === 'string' ? v : d)
 const num = (v: unknown, d: number) => (typeof v === 'string' && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : d)
@@ -62,12 +62,28 @@ const sortOptions = [
   { value: 'top-rated' as SortKey, label: 'Top rated' },
 ]
 
+const anywhere = computed(() => !origin.value)
 const heading = computed(() => {
   const what = filters.category ? categoryLabel(filters.category) : filters.q ? `“${filters.q}”` : 'Businesses'
-  const where = filters.radiusKm ? `within ${filters.radiusKm} km` : 'near you'
+  const src = location.value.source
+  const where = anywhere.value
+    ? 'everywhere'
+    : filters.radiusKm
+      ? `within ${filters.radiusKm} km`
+      : src === 'device' ? 'near you' : `near ${location.value.label.split(',')[0]}`
   const n = results.value?.length ?? 0
-  return { title: `${what} ${where}`, count: `${n} ${n === 1 ? 'result' : 'results'}` }
+  const from = anywhere.value ? 'best rated first' : src === 'device' ? 'from your location' : `from ${location.value.label}`
+  return { title: `${what} ${where}`, count: `${n} ${n === 1 ? 'result' : 'results'} · ${from}` }
 })
+
+// "Search this area": after panning the map, search around its centre instead.
+const movedTo = ref<{ lat: number; lng: number } | null>(null)
+watch(origin, () => (movedTo.value = null))
+async function searchHere() {
+  if (!movedTo.value) return
+  await choosePoint(movedTo.value)
+  movedTo.value = null
+}
 
 const isDesktop = useIsDesktop()
 const activeId = ref<string | null>(null)
@@ -113,7 +129,8 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
         </div>
 
         <div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 lg:mx-0 lg:flex-wrap lg:px-0">
-          <FilterSelect id="f-radius" v-model="filters.radiusKm" label="Distance" icon="pin" :options="radiusOptions" active />
+          <LocationButton variant="chip" />
+          <FilterSelect v-if="!anywhere" id="f-radius" v-model="filters.radiusKm" label="Distance" :options="radiusOptions" :active="filters.radiusKm > 0" />
           <FilterSelect id="f-rating" v-model="filters.minRating" label="Rating" :options="ratingOptions" :active="filters.minRating > 0" />
           <FilterSelect id="f-cat" v-model="filters.category" label="Category" :options="categoryOptions" :active="!!filters.category" />
           <FilterToggle v-model="filters.openNow" label="Open now" />
@@ -125,15 +142,18 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
       <!-- Phone map -->
       <div class="relative mx-4 mt-3 overflow-hidden rounded-[20px] border border-[#E0D8C6] transition-[height] lg:hidden" :class="mapExpanded ? 'h-[60vh]' : 'h-[214px]'">
         <ClientOnly>
-          <NearbyMap v-if="!isDesktop" ref="mapRef" :vendors="results ?? []" :origin="origin" :radius-km="filters.radiusKm" :active-id="activeId" @select="onSelect" />
+          <NearbyMap v-if="!isDesktop" ref="mapRef" :vendors="results ?? []" :origin="origin" :is-device="location.source === 'device'" :radius-km="filters.radiusKm" :active-id="activeId" @select="onSelect" @moved="movedTo = $event" />
           <template #fallback><div class="size-full bg-[#ECE6D8]" /></template>
         </ClientOnly>
         <button
           type="button"
-          class="absolute right-2.5 top-2.5 z-[500] flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-bold shadow"
+          class="absolute right-2.5 top-2.5 z-[1000] flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-bold shadow"
           @click="mapExpanded = !mapExpanded"
         >
           <AppIcon name="expand" :size="16" />{{ mapExpanded ? 'Smaller map' : 'Full map' }}
+        </button>
+        <button v-if="movedTo" type="button" class="absolute bottom-3 left-1/2 z-[1000] flex h-10 -translate-x-1/2 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-ink px-4 text-sm font-bold text-white shadow-lg" @click="searchHere">
+          <AppIcon name="search" :size="16" />Search this area
         </button>
       </div>
 
@@ -141,9 +161,9 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
         <div class="flex items-center justify-between gap-3 pb-1">
           <div class="flex min-w-0 flex-col">
             <h1 class="truncate text-[17px] font-bold">{{ heading.title }}</h1>
-            <span class="text-xs text-muted">{{ heading.count }} · from {{ location.label }}</span>
+            <span class="text-xs text-muted">{{ heading.count }}</span>
           </div>
-          <FilterSelect id="f-sort" v-model="filters.sort" label="Sort by" :options="sortOptions" />
+          <FilterSelect v-if="!anywhere" id="f-sort" v-model="filters.sort" label="Sort by" :options="sortOptions" />
         </div>
 
         <div v-if="status === 'pending' && !results" class="flex flex-col gap-3 pt-3">
@@ -151,7 +171,7 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
         </div>
         <div v-else-if="!results?.length" class="flex flex-col items-center gap-3 py-12 text-center">
           <AppIcon name="search" :size="32" class="text-muted" />
-          <p class="max-w-[300px] text-[15px] text-ink-2">No businesses match these filters yet. Try a wider distance or fewer filters.</p>
+          <p class="max-w-[300px] text-[15px] text-ink-2">No businesses match these filters {{ anywhere ? 'yet' : 'here yet' }}. Try {{ anywhere ? 'fewer filters' : 'a wider distance, another area or fewer filters' }}.</p>
           <button type="button" class="btn-outline" @click="clearFilters">Clear filters</button>
         </div>
         <div v-else class="flex flex-col lg:gap-1">
@@ -163,8 +183,11 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
     <!-- Desktop map -->
     <div class="sticky top-6 hidden h-[calc(100dvh-140px)] min-h-[480px] overflow-hidden rounded-3xl border border-[#E0D8C6] lg:block">
       <ClientOnly>
-        <NearbyMap v-if="isDesktop" :vendors="results ?? []" :origin="origin" :radius-km="filters.radiusKm" :active-id="activeId" @select="onSelect" />
+        <NearbyMap v-if="isDesktop" :vendors="results ?? []" :origin="origin" :is-device="location.source === 'device'" :radius-km="filters.radiusKm" :active-id="activeId" @select="onSelect" @moved="movedTo = $event" />
       </ClientOnly>
+      <button v-if="movedTo" type="button" class="absolute left-1/2 top-4 z-[1000] flex h-10 -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-white shadow-lg" @click="searchHere">
+        <AppIcon name="search" :size="16" />Search this area
+      </button>
     </div>
   </div>
 </template>

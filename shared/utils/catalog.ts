@@ -29,7 +29,8 @@ export function formatNaira(amount: number): string {
   return '₦' + Math.round(amount).toLocaleString('en-NG')
 }
 
-export function formatKm(km: number): string {
+export function formatKm(km: number | null): string {
+  if (km == null) return ''
   return km < 1 ? `${Math.round(km * 1000 / 50) * 50} m` : `${km.toFixed(1)} km`
 }
 

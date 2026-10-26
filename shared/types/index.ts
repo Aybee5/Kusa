@@ -141,7 +141,8 @@ export interface RatingSummary {
 
 export interface VendorWithMeta extends Vendor {
   rating: RatingSummary
-  distanceKm: number
+  /** Null when the shopper is browsing without a location. */
+  distanceKm: number | null
   openState: OpenState
   productCount: number
   fromPrice: number | null

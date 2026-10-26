@@ -14,7 +14,7 @@ Needs Node 22+ and Postgres 14+ (Docker is easiest).
 
 ```bash
 cp .env.example .env
-docker compose up -d db      # Postgres on localhost:5432 matching .env
+docker compose up -d db      # Postgres + PostGIS on localhost:5432 matching .env
 npm install
 npm run dev                  # http://localhost:3000
 ```
@@ -84,7 +84,7 @@ shared/                types and helpers used by both app and server
 
 | Area | Endpoints |
 | --- | --- |
-| Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key` |
+| Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort` (leave out `lat`/`lng` to browse anywhere), `GET /areas`, `GET /health`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key` |
 | Auth | `POST /auth/code`, `POST /auth/verify`, `GET /auth/me`, `POST /auth/logout` |
 | Signed in | `POST /vendors/:id/reviews`, `GET /vendors/:id/reviews/mine`, `POST /reviews/:id/report`, `POST /uploads` |
 | Vendor | `GET/POST /me/vendor`, `POST /me/vendor/verification`, `GET /me/vendor/stats`, `GET/POST /me/products`, `PATCH /me/products/:id` |
@@ -92,7 +92,19 @@ shared/                types and helpers used by both app and server
 
 **Sign-in.** Phone number + 6-digit SMS code (10-minute expiry, 5 tries, one code per minute). Codes and session tokens are stored only as hashes. The app sends `Authorization: Bearer <token>`, which works the same on the website and in the native apps. Sessions last 60 days (`SESSION_DAYS`). Numbers listed in `ADMIN_PHONES` become admins when they sign in.
 
-**Near me.** Businesses store latitude and longitude; searches use an indexed bounding box, then exact distance. This runs on any Postgres. If you grow to tens of thousands of businesses, switch to PostGIS (`ST_DWithin`) in `server/utils/vendors.ts`.
+**Location.** Shoppers choose how results are measured, and none of the options require sharing their location:
+- **Use my current location:** closest first. The point is sent with each search to sort results; it isn't stored on the server.
+- **Choose an area:** neighbourhoods and cities that have verified businesses (`GET /api/areas`), with a search box, plus "All of <city>".
+- **Search this area:** pan the map and search around its centre, to look anywhere.
+- **Browse anywhere:** no location at all; no distances, best rated first, from every city.
+
+Until they choose, results are sorted from a default area (central Kano), labelled as the default. The choice is remembered on the device. Vendors mark their shop by tapping the map or dragging a pin; sharing their phone's location is optional. Registration also asks for the area and city, which feed the area list.
+
+**Near-me search engine (`GEO_SEARCH`).** Two interchangeable modes, chosen with an environment variable:
+- `basic` (default): latitude/longitude columns, an indexed bounding box, then exact distance. Runs on any Postgres.
+- `postgis`: a generated `geography` column with a GiST index; the database filters by radius (`ST_DWithin`) and returns nearest first using the index (KNN). Use it once you have tens of thousands of businesses.
+
+With `GEO_SEARCH=postgis`, start-up enables the extension and adds the column and index if missing. If the database can't (no PostGIS, or no permission to create extensions), the server logs why and stays on `basic`, so nothing breaks. Switching back needs no database changes. `GET /api/health` shows which mode is active. The code is in `server/utils/geo.ts`.
 
 **Ratings.** One rating per shopper per business. Averages count only published reviews from accounts that aren't suspended. A new account posting several ratings within an hour is flagged automatically, and vendors or shoppers can report a review for admins to check.
 
@@ -105,7 +117,7 @@ shared/                types and helpers used by both app and server
 The server is a standard Node app (`.output/server/index.mjs`) that needs a Postgres database.
 
 1. Create a database (Neon, Supabase, Railway, RDS, or your own) and set `DATABASE_URL` (add `?sslmode=require` for hosted ones).
-2. Set `AUTH_SECRET` (long random string), `ADMIN_PHONES`, `SMS_PROVIDER=termii` with `TERMII_API_KEY` and `TERMII_SENDER_ID`, and the `S3_*` settings for photos.
+2. Set `AUTH_SECRET` (long random string), `ADMIN_PHONES`, `GEO_SEARCH` (`basic` or `postgis`), `SMS_PROVIDER=termii` with `TERMII_API_KEY` and `TERMII_SENDER_ID`, and the `S3_*` settings for photos.
 3. Build and run: `npm run build && node .output/server/index.mjs`, or use the `Dockerfile` (`docker compose --profile full up --build` runs it locally with a database).
 
 Migrations run automatically when the server starts. Leave `SEED_DEMO_DATA` unset in production.

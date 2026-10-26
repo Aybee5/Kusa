@@ -16,7 +16,7 @@ const Body = z.object({
 export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, Body.parse)
   const v = await findPublicVendor(getRouterParam(event, 'vendor')!)
-  if (!v) throw createError({ statusCode: 404, statusMessage: 'Business not found' })
+  if (!v) throw createError({ statusCode: 404, message: 'Business not found' })
   const db = useDb()
   const day = todayLagos()
   const { vendorDailyStats: s, vendorSourceStats: src, productDailyViews: pv, products } = schema

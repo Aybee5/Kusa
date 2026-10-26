@@ -13,7 +13,7 @@ export async function sendSignInCode(phone: string, code: string): Promise<void>
   }
 
   if (cfg.smsProvider === 'termii') {
-    if (!cfg.termii.apiKey) throw createError({ statusCode: 500, statusMessage: 'TERMII_API_KEY is not set' })
+    if (!cfg.termii.apiKey) throw createError({ statusCode: 500, message: 'TERMII_API_KEY is not set' })
     await $fetch(`${cfg.termii.baseUrl}/api/sms/send`, {
       method: 'POST',
       body: {
@@ -26,10 +26,10 @@ export async function sendSignInCode(phone: string, code: string): Promise<void>
       },
     }).catch((e: unknown) => {
       console.error('[sms] Termii error', e)
-      throw createError({ statusCode: 502, statusMessage: 'We couldn’t send the code. Please try again.' })
+      throw createError({ statusCode: 502, message: 'We couldn’t send the code. Please try again.' })
     })
     return
   }
 
-  throw createError({ statusCode: 500, statusMessage: `Unknown SMS_PROVIDER "${cfg.smsProvider}"` })
+  throw createError({ statusCode: 500, message: `Unknown SMS_PROVIDER "${cfg.smsProvider}"` })
 }

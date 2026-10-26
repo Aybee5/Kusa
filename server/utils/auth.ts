@@ -55,14 +55,14 @@ export async function getUser(event: H3Event): Promise<UserRow | null> {
 
 export async function requireUser(event: H3Event): Promise<UserRow> {
   const user = await getUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Please sign in' })
-  if (user.status === 'suspended') throw createError({ statusCode: 403, statusMessage: 'This account is suspended' })
+  if (!user) throw createError({ statusCode: 401, message: 'Please sign in' })
+  if (user.status === 'suspended') throw createError({ statusCode: 403, message: 'This account is suspended' })
   return user
 }
 
 export async function requireRole(event: H3Event, ...roles: Role[]): Promise<UserRow> {
   const user = await requireUser(event)
-  if (!roles.includes(user.role)) throw createError({ statusCode: 403, statusMessage: 'You don’t have access to this' })
+  if (!roles.includes(user.role)) throw createError({ statusCode: 403, message: 'You don’t have access to this' })
   return user
 }
 
@@ -70,7 +70,7 @@ export async function requireRole(event: H3Event, ...roles: Role[]): Promise<Use
 export async function requireVendor(event: H3Event) {
   const user = await requireRole(event, 'vendor')
   const [vendor] = await useDb().select().from(schema.vendors).where(eq(schema.vendors.ownerId, user.id)).limit(1)
-  if (!vendor) throw createError({ statusCode: 404, statusMessage: 'Register your business first' })
+  if (!vendor) throw createError({ statusCode: 404, message: 'Register your business first' })
   return { user, vendor }
 }
 

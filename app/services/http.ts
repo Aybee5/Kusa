@@ -16,7 +16,7 @@ function messageOf(data?: { statusMessage?: string; message?: string }): string 
       return 'Please check the form and try again.'
     }
   }
-  return data?.statusMessage || undefined
+  return data?.message || data?.statusMessage || undefined
 }
 
 /** The Kusa API over HTTP (server/api). */
@@ -53,6 +53,7 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     listProducts: (vendorId) => call(`/vendors/${vendorId}/products`),
     getProduct: (id, origin) => orNull(call(`/products/${encodeURIComponent(id)}`, { query: { ...origin } })),
     latestProducts: (origin, limit) => call('/products/latest', { query: { ...origin, limit } }),
+    listAreas: () => call('/areas'),
     listReviews: (vendorId) => call(`/vendors/${vendorId}/reviews`),
     myReview: (vendorId) => call(`/vendors/${vendorId}/reviews/mine`),
     saveReview: ({ vendorId, ...body }) => call(`/vendors/${vendorId}/reviews`, { method: 'POST', body }),

@@ -8,7 +8,7 @@ defineProps<{ item: ProductWithVendor }>()
     <PhotoBox :tint="item.product.tint" class="size-[60px] shrink-0 rounded-[14px] lg:size-[72px] lg:rounded-xl" />
     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
       <span class="truncate text-[15px] font-bold">{{ item.product.name }}</span>
-      <span class="truncate text-[13px] text-muted">{{ item.vendor.name }} · {{ formatKm(item.vendor.distanceKm) }}</span>
+      <span class="truncate text-[13px] text-muted">{{ item.vendor.name }} · {{ item.vendor.distanceKm != null ? formatKm(item.vendor.distanceKm) : item.vendor.area }}</span>
     </div>
     <span class="font-display text-base font-bold lg:text-lg">{{ formatNaira(item.product.options?.[0]?.price ?? item.product.price) }}</span>
   </NuxtLink>

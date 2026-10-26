@@ -54,7 +54,7 @@ useSeoMeta({
         <span class="flex size-7 items-center justify-center rounded-[9px] font-display text-[11px] font-extrabold" :style="{ backgroundColor: data.vendor.tint }">{{ data.vendor.initials }}</span>
         <span class="text-sm font-semibold">{{ data.vendor.name }}</span>
         <VerifiedBadge />
-        <span class="ml-auto flex items-center gap-2 text-[13px]"><RatingInline :rating="data.vendor.rating" /><span class="text-muted">{{ formatKm(data.vendor.distanceKm) }}</span></span>
+        <span class="ml-auto flex items-center gap-2 text-[13px]"><RatingInline :rating="data.vendor.rating" /><span v-if="data.vendor.distanceKm != null" class="text-muted">{{ formatKm(data.vendor.distanceKm) }}</span></span>
       </NuxtLink>
 
       <div class="flex items-end justify-between gap-3">

@@ -26,10 +26,14 @@ export interface AdminVendor extends Vendor {
   reviewNote?: string
 }
 
+export interface Area { city: string; area: string; lat: number; lng: number; count: number }
+
 export interface NewVendorInput {
   name: string
   category: CategoryId
   whatsapp: string
+  area: string
+  city: string
   landmark: string
   lat: number
   lng: number

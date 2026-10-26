@@ -4,7 +4,7 @@ import type { PublicReview } from '#shared/types/api'
 /** GET /api/vendors/:slugOrId/reviews: published reviews, written ones first. */
 export default defineEventHandler(async (event): Promise<PublicReview[]> => {
   const v = await findPublicVendor(getRouterParam(event, 'vendor')!)
-  if (!v) throw createError({ statusCode: 404, statusMessage: 'Business not found' })
+  if (!v) throw createError({ statusCode: 404, message: 'Business not found' })
   const { reviews, users } = schema
   const rows = await useDb()
     .select({ r: reviews, name: users.name, tint: users.tint })

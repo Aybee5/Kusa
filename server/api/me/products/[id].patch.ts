@@ -9,6 +9,6 @@ export default defineEventHandler(async (event) => {
   const { available } = await readValidatedBody(event, Body.parse)
   const [row] = await useDb().update(schema.products).set({ available })
     .where(and(eq(schema.products.id, getRouterParam(event, 'id')!), eq(schema.products.vendorId, vendor.id))).returning()
-  if (!row) throw createError({ statusCode: 404, statusMessage: 'Product not found' })
+  if (!row) throw createError({ statusCode: 404, message: 'Product not found' })
   return toProduct(row)
 })

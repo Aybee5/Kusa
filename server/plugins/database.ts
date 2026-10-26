@@ -21,6 +21,7 @@ export default defineNitroPlugin(() => {
     (async () => {
       const journal = JSON.parse(await read('meta/_journal.json'))
       await runMigrations(usePool(), journal, (tag) => read(`${tag}.sql`))
+      await setupGeo(usePool(), cfg.geoSearch)
       if (cfg.seedDemoData) await seedDemoData(useDb())
     })().catch((e) => {
       console.error('[db] start-up failed:', e)

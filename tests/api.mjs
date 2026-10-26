@@ -42,6 +42,18 @@ try {
   ok('suspended vendor not public', (await req('GET', '/vendors/glow-by-amina')).status === 404)
   r = await req('GET', '/products/latest', { query: { limit: 4 } })
   ok('latest products', r.status === 200 && r.data.length === 4)
+  r = await req('GET', '/vendors', { query: { sort: 'nearest' } })
+  ok('browse anywhere: no distances', r.status === 200 && r.data.length > 0 && r.data.every((v) => v.distanceKm === null))
+  ok('browse anywhere: best rated first', r.data.every((v, i, a) => i === 0 || a[i - 1].rating.average >= v.rating.average))
+  r = await req('GET', '/vendors', { query: { radiusKm: 1, lat: 11.9965, lng: 8.531, sort: 'nearest' } })
+  ok('nearest first within 1 km', r.data.length > 0 && r.data.every((v, i, a) => v.distanceKm <= 1 && (i === 0 || a[i - 1].distanceKm <= v.distanceKm)), `${r.data.length}`)
+  r = await req('GET', '/vendors', { query: { radiusKm: 5, lat: 9.0765, lng: 7.3986 } })
+  ok('another city: nothing near Abuja', r.status === 200 && r.data.length === 0)
+  r = await req('GET', '/areas')
+  ok('areas list', r.status === 200 && r.data.some((a) => a.area === 'Tarauni' && a.city === 'Kano' && a.count >= 1), `${r.data.length} areas`)
+  r = await req('GET', '/health')
+  ok('health', r.data?.ok === true, `geo=${r.data?.geoSearch}`)
+  if (process.env.EXPECT_GEO) ok(`geo mode is ${process.env.EXPECT_GEO}`, r.data?.geoSearch === process.env.EXPECT_GEO)
   ok('bad query rejected', (await req('GET', '/vendors', { query: { sort: 'nope' } })).status === 400)
 
   // Auth
@@ -90,10 +102,10 @@ try {
 
   // New vendor: register, upload, verify
   const newbie = await signIn('07031234567', 'Rukayya Musa')
-  r = await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Rukayya Cakes', category: 'cakes', whatsapp: '07031234567', landmark: 'Near Zoo Road', lat: 12.0, lng: 8.53, delivery: true, pickup: false } })
+  r = await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Rukayya Cakes', category: 'cakes', whatsapp: '07031234567', area: 'Zoo Road', city: 'Kano', landmark: 'Near the roundabout', lat: 12.0, lng: 8.53, delivery: true, pickup: false } })
   ok('register business', r.status === 200 && r.data.user.role === 'vendor' && r.data.vendor.status === 'pending', r.data?.vendor?.slug)
   const newVendorId = r.data.vendor.id
-  ok('second business refused', (await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Again', category: 'cakes', whatsapp: '07031234567', landmark: '', lat: 12, lng: 8.5, delivery: true, pickup: true } })).status === 409)
+  ok('second business refused', (await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Again', category: 'cakes', whatsapp: '07031234567', area: 'Zoo Road', city: 'Kano', landmark: '', lat: 12, lng: 8.5, delivery: true, pickup: true } })).status === 409)
   ok('non-image upload rejected', (await req('POST', '/uploads', { token: newbie.token, body: { kind: 'verification', dataUrl: 'data:image/png;base64,aGVsbG8=' } })).status === 400)
   const id = (await req('POST', '/uploads', { token: newbie.token, body: { kind: 'verification', dataUrl: PNG } })).data
   const selfie = (await req('POST', '/uploads', { token: newbie.token, body: { kind: 'verification', dataUrl: PNG } })).data
@@ -117,6 +129,8 @@ try {
   ok('signed link works', (await fetch(B.replace('/api', '') + r.data.documentUrls.id)).status === 200)
   ok('approve vendor', (await req('PATCH', `/admin/vendors/${newVendorId}`, { token: admin.token, body: { status: 'verified' } })).data?.status === 'verified')
   ok('approved business is public', (await req('GET', `/vendors/${newVendorId}`)).status === 200)
+  r = await req('GET', '/vendors', { query: { radiusKm: 2, lat: 12.0, lng: 8.53 } })
+  ok('new business found by location', r.data.some((v) => v.id === newVendorId))
   ok('suspend needs reason', (await req('PATCH', '/admin/vendors/v9', { token: admin.token, body: { status: 'suspended' } })).status === 400)
   ok('suspend vendor', (await req('PATCH', '/admin/vendors/v9', { token: admin.token, body: { status: 'suspended', reason: 'Misleading listings' } })).data?.suspensionReason === 'Misleading listings')
   r = await req('GET', '/admin/reviews', { token: admin.token })

@@ -2,7 +2,7 @@ import type {
   Product, Review, ReviewStatus, SearchFilters, SessionUser, ShopperStatus, Vendor, VendorStats, VendorStatus, VendorWithMeta,
 } from '#shared/types'
 import type {
-  AdminReview, AdminShopper, AdminVendor, AuthResult, CodeSent, LatLng, NewProductInput, NewVendorInput,
+  AdminReview, AdminShopper, AdminVendor, Area, AuthResult, CodeSent, LatLng, NewProductInput, NewVendorInput,
   ProductWithVendor, PublicReview, TrafficEvent, TrafficSourceKey, UploadKind, UploadResult, VerificationInput,
 } from '#shared/types/api'
 
@@ -11,11 +11,13 @@ export type * from '#shared/types/api'
 /** Everything the app asks of the Kusa API (server/api). */
 export interface KusaApi {
   // Shopper
-  searchVendors(filters: SearchFilters, origin: LatLng): Promise<VendorWithMeta[]>
-  getVendor(slug: string, origin: LatLng): Promise<VendorWithMeta | null>
+  // origin is null when the shopper browses without a location (no distances)
+  searchVendors(filters: SearchFilters, origin: LatLng | null): Promise<VendorWithMeta[]>
+  getVendor(slug: string, origin: LatLng | null): Promise<VendorWithMeta | null>
   listProducts(vendorId: string): Promise<Product[]>
-  getProduct(id: string, origin: LatLng): Promise<ProductWithVendor | null>
-  latestProducts(origin: LatLng, limit: number): Promise<ProductWithVendor[]>
+  getProduct(id: string, origin: LatLng | null): Promise<ProductWithVendor | null>
+  latestProducts(origin: LatLng | null, limit: number): Promise<ProductWithVendor[]>
+  listAreas(): Promise<Area[]>
   listReviews(vendorId: string): Promise<PublicReview[]>
   myReview(vendorId: string): Promise<Review | null>
   saveReview(input: { vendorId: string; stars: number; tags: string[]; text: string }): Promise<Review>

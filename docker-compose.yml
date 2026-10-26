@@ -2,7 +2,8 @@
 # Whole stack (database + web/API server):  docker compose --profile full up --build
 services:
   db:
-    image: postgres:16-alpine
+    # Postgres with PostGIS, so GEO_SEARCH=postgis works locally too.
+    image: postgis/postgis:16-3.4-alpine
     environment:
       POSTGRES_USER: kusa
       POSTGRES_PASSWORD: kusa
@@ -26,6 +27,7 @@ services:
       DATABASE_URL: postgres://kusa:kusa@db:5432/kusa
       AUTH_SECRET: change-me-in-production
       SMS_PROVIDER: console
+      GEO_SEARCH: postgis
       SEED_DEMO_DATA: "true"
       NUXT_PUBLIC_SHOW_DEMO_ACCOUNTS: "true"
       UPLOADS_DIR: /data/uploads

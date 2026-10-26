@@ -15,6 +15,10 @@ const { data: nearby } = await useAsyncData('home-nearby', async () => {
 }, { watch: [origin] })
 
 const anyOpen = computed(() => nearby.value?.some((v) => v.openState.open) ?? false)
+const nearbyTitle = computed(() => {
+  if (!origin.value) return anyOpen.value ? 'Open now, top rated' : 'Top rated on Kusa'
+  return anyOpen.value ? 'Open now, close to you' : 'Close to you'
+})
 
 const { data: fresh } = await useAsyncData('home-fresh', () => api.latestProducts(origin.value, 4), { watch: [origin] })
 
@@ -65,7 +69,7 @@ function search() {
 
     <section class="flex flex-col gap-2.5 lg:gap-4">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 class="text-[17px] font-bold lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{{ anyOpen ? 'Open now, close to you' : 'Close to you' }}</h2>
+        <h2 class="text-[17px] font-bold lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{{ nearbyTitle }}</h2>
         <NuxtLink to="/search" class="py-2.5 text-sm font-bold lg:text-[15px]">See map</NuxtLink>
       </div>
       <div class="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 lg:mx-0 lg:grid lg:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] lg:gap-4 lg:overflow-visible lg:px-0">

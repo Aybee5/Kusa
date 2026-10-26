@@ -15,7 +15,7 @@ const Body = z.object({
 export default defineEventHandler(async (event): Promise<UploadResult> => {
   const user = await requireUser(event)
   const { kind, dataUrl } = await readValidatedBody(event, Body.parse)
-  if (kind === 'product' && user.role !== 'vendor') throw createError({ statusCode: 403, statusMessage: 'Only vendors can add product photos' })
+  if (kind === 'product' && user.role !== 'vendor') throw createError({ statusCode: 403, message: 'Only vendors can add product photos' })
   const key = await storeImage(dataUrl, kind, user.id)
   return { key, url: kind === 'product' ? publicFileUrl(key)! : null }
 })
