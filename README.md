@@ -84,6 +84,17 @@ node .output/server/index.mjs # or deploy to Vercel, Netlify, Cloudflare, a VPSâ
 
 Signed-in areas (`/vendor`, `/admin`, `/account`, rating) render in the browser only; public pages are server-rendered.
 
+### Staging (kusa.yasr.app)
+
+Staging runs on the OCI server (`ssh oci`) as the Docker container `kusa-staging` on `127.0.0.1:3100`. Caddy (`/etc/caddy/Caddyfile`) serves `kusa.yasr.app` in front of it with a Let's Encrypt certificate and a `noindex` header. Cloudflare proxies the domain to the server (SSL mode Full). To redeploy:
+
+```bash
+rsync -az --delete --exclude node_modules --exclude .nuxt --exclude .output --exclude .git --exclude android --exclude ios ./ oci:~/kusa/
+ssh oci 'cd ~/kusa && docker build -t kusa:staging --build-arg NUXT_PUBLIC_SITE_URL=https://kusa.yasr.app . \
+  && docker rm -f kusa-staging \
+  && docker run -d --name kusa-staging --restart unless-stopped -p 127.0.0.1:3100:3000 kusa:staging'
+```
+
 ### iOS and Android apps
 
 ```bash

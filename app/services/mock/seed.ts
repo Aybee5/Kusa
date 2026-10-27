@@ -119,8 +119,11 @@ export const vendors: Vendor[] = [
 ]
 
 let pid = 0
+// Demo photos are in public/images/products, named after the product
+// (credits in CREDITS.md there).
+const photo = (name: string) => `/images/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}.webp`
 const p = (vendorId: string, name: string, price: number, tint: string, photoLabel: string, description: string, extra: Partial<Product> = {}): Product => ({
-  id: `p${++pid}`, vendorId, name, price, tint, photoLabel, description, tags: [], available: true,
+  id: `p${++pid}`, vendorId, name, price, tint, photoLabel, image: photo(name), description, tags: [], available: true,
   createdAt: '2026-10-01', ...extra,
 })
 

@@ -29,14 +29,16 @@ useSeoMeta({
   description: `${p0.description} ${formatNaira(p0.options?.[0]?.price ?? p0.price)} from ${v0.name}, ${v0.area}, ${v0.city}.`,
   ogTitle: `${p0.name} · ${formatNaira(p0.options?.[0]?.price ?? p0.price)}`,
   ogDescription: `From ${v0.name} on Kusa · ${v0.area}, ${v0.city}`,
+  // Uploaded photos may still be data URLs, which link previews can't use.
+  ogImage: p0.image?.startsWith('/') ? `${useRuntimeConfig().public.siteUrl}${p0.image}` : p0.image?.startsWith('http') ? p0.image : undefined,
 })
 </script>
 
 <template>
   <div v-if="data" class="mx-auto max-w-[1240px] pb-[110px] lg:grid lg:grid-cols-2 lg:gap-10 lg:px-6 lg:pb-16 lg:pt-8">
     <div class="relative">
-      <PhotoBox :tint="data.product.tint" class="h-[318px] lg:h-[520px] lg:rounded-3xl" />
-      <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white/85 px-2.5 py-1 text-xs text-ink-2">
+      <PhotoBox :tint="data.product.tint" :src="data.product.image" :alt="data.product.name" class="h-[318px] lg:h-[520px] lg:rounded-3xl" />
+      <span v-if="!data.product.image" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white/85 px-2.5 py-1 text-xs text-ink-2">
         Product photo · {{ data.product.photoLabel }}
       </span>
       <div class="pt-safe absolute inset-x-3 top-2.5 flex justify-between lg:hidden">

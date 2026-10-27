@@ -132,7 +132,7 @@ useSeoMeta({
         <div v-if="tab === 'products'" class="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
           <NuxtLink v-for="p in products" :key="p.id" :to="`/p/${p.id}`" class="flex flex-col gap-2 text-ink">
             <div class="relative">
-              <PhotoBox :tint="p.tint" class="h-[124px] rounded-2xl lg:h-44" />
+              <PhotoBox :tint="p.tint" :src="p.image" :alt="p.name" class="h-[124px] rounded-2xl lg:h-44" />
               <span v-if="!p.available" class="absolute left-2 top-2 rounded-full bg-ink px-2 py-0.5 text-[11px] font-bold text-white">Sold out</span>
             </div>
             <div class="flex flex-col gap-0.5">
