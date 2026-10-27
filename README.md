@@ -91,7 +91,7 @@ shared/                types and helpers used by both app and server
 
 | Area | Endpoints |
 | --- | --- |
-| Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort` (leave out `lat`/`lng` to browse anywhere), `GET /areas`, `GET /health`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key`, `GET /promoted?placement=home\|search&…same filters`, `POST /promotions/:id/events`, `GET /promotions/plans` |
+| Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort&state&city` (leave out `lat`/`lng` to browse without a location), `GET /areas`, `GET /health`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest?state&city`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key`, `GET /promoted?placement=home\|search&…same filters`, `POST /promotions/:id/events`, `GET /promotions/plans` |
 | Auth | `GET /auth/options`, `POST /auth/code` (`{ email }` or `{ phone }`), `POST /auth/verify`, `GET /auth/me`, `POST /auth/logout` |
 | Signed in | `POST /vendors/:id/reviews`, `GET /vendors/:id/reviews/mine`, `POST /reviews/:id/report`, `POST /uploads` |
 | Vendor | `GET/POST/PATCH /me/vendor`, `POST /me/vendor/verification`, `GET /me/vendor/stats`, `GET/POST /me/products`, `PATCH/DELETE /me/products/:id`, `GET/POST /me/promotions`, `PATCH /me/promotions/:id` |
@@ -101,13 +101,16 @@ shared/                types and helpers used by both app and server
 
 **Contact buttons.** Every business has a business phone number (required; it's how Kusa reaches them). Shoppers see the buttons the vendor turns on: WhatsApp (their business number or another one), Instagram (username), and Call. At least one must be on, and the vendor picks the main one. Taps on each are counted for the vendor's dashboard.
 
-**Location.** Shoppers choose how results are measured, and none of the options require sharing their location:
-- **Use my current location:** closest first. The point is sent with each search to sort results; it isn't stored on the server.
-- **Choose an area:** neighbourhoods and cities that have verified businesses (`GET /api/areas`), with a search box, plus "All of <city>".
-- **Search this area:** pan the map and search around its centre, to look anywhere.
-- **Browse anywhere:** no location at all; no distances, best rated first, from every city.
+**Location.** Shoppers choose where to look, and none of the options require sharing their location:
+- **Near me:** closest first. The point is sent with each search to sort results; it isn't stored on the server.
+- **Browse a state or city** (like a classifieds site): All Nigeria → a state → a city, each with its number of businesses, plus a search box for states, cities and neighbourhoods. Only businesses there are shown, best rated first, with no distances. All 36 states and the FCT are listed; ones without businesses yet are under "Other states". The place is part of the link (`/search?state=Lagos&city=Ikeja`, `state=abuja` works too), so searches can be shared.
+- **A neighbourhood:** closest to that neighbourhood first (includes nearby areas).
+- **Search this area:** pan the map and search around its centre.
+- **All Nigeria:** every state, best rated first.
 
-Until they choose, results are sorted from a default area (central Kano), labelled as the default. The choice is remembered on the device. Vendors mark their shop by tapping the map or dragging a pin; sharing their phone's location is optional. Registration also asks for the area and city, which feed the area list.
+Until they choose, results are sorted from a default area (central Kano), labelled as the default. The choice is remembered on the device. Sponsored slots follow the place too: a vendor's promotion only shows when browsing their state or city (or their target cities), while Kusa's own banners show everywhere.
+
+Every business has a state (one of the 36 or FCT), suggested from its map pin at sign-up and editable in My shop; city and area are typed. Vendors mark their shop by tapping the map or dragging a pin; sharing their phone's location is optional. Existing businesses got their state from their city name, or the nearest state capital to their pin (migration `0005_vendor_state.sql`).
 
 **Search.** Every filter (distance, category, rating, open now, delivery, pickup, text) and both sorts run in the database, so the 100 results returned are always the right 100.
 

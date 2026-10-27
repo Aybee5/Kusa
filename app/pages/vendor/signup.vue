@@ -2,6 +2,7 @@
 import type { CategoryId } from '#shared/types'
 import type { LatLng } from '#shared/types/api'
 import type { ContactDraft } from '~/utils/contact-draft'
+import { guessState, NG_STATES, stateLabel } from '#shared/utils/states'
 
 definePageMeta({ layout: 'bare' })
 
@@ -22,12 +23,17 @@ const codeSent = ref(false)
 const devCode = ref<string | null>(null)
 
 // Step 2: business
-const biz = reactive({ name: '', category: 'small-chops' as CategoryId, area: '', city: 'Kano', landmark: '', delivery: true, pickup: true })
+const biz = reactive({ name: '', category: 'small-chops' as CategoryId, area: '', city: '', state: '' as string, landmark: '', delivery: true, pickup: true })
+// Suggest the state from the pin until the vendor picks one.
+const stateTouched = ref(false)
 const contact = ref<ContactDraft>(newContactDraft())
 // Where the business is. Set from the phone's location or by tapping the map,
 // so vendors who don't want to share their location can still be found.
 const shop = ref<LatLng | null>(null)
 const mapCenter = computed<LatLng>(() => ({ lat: location.value.lat, lng: location.value.lng }))
+watch(shop, (p) => {
+  if (p && !stateTouched.value) biz.state = guessState(p)
+})
 
 // Step 3: verification. Photos upload as soon as they're taken; we keep the preview and the stored key.
 const idTypes = ['NIN slip', "Voter's card", "Driver's licence", 'International passport'] as const
@@ -89,8 +95,9 @@ const missing = computed(() => {
   if (biz.name.trim().length < 2) return 'Add your business name'
   if (contactProblem(contact.value)) return contactProblem(contact.value)
   if (biz.area.trim().length < 2) return 'Add your area'
-  if (biz.city.trim().length < 2) return 'Add your city'
+  if (biz.city.trim().length < 2) return 'Add your city or town'
   if (!shop.value) return 'Mark your location on the map'
+  if (!biz.state) return 'Choose your state'
   if (!biz.delivery && !biz.pickup) return 'Choose pickup, delivery or both'
   return ''
 })
@@ -104,6 +111,7 @@ const saveBusiness = () => run(async () => {
     ...contactInput(contact.value),
     area: biz.area.trim(),
     city: biz.city.trim(),
+    state: biz.state,
     landmark: biz.landmark.trim(),
     lat: shop.value!.lat,
     lng: shop.value!.lng,
@@ -196,9 +204,17 @@ useSeoMeta({ title: 'Sell on Kusa', robots: 'noindex' })
             <input id="area" v-model="biz.area" type="text" autocomplete="address-level3" placeholder="e.g. Tarauni" class="field" />
           </div>
           <div class="flex min-w-0 flex-col gap-1.5">
-            <label for="city" class="label">City</label>
+            <label for="city" class="label">City or town</label>
             <input id="city" v-model="biz.city" type="text" autocomplete="address-level2" placeholder="e.g. Kano" class="field" />
           </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="bstate" class="label">State</label>
+          <select id="bstate" v-model="biz.state" class="field" @change="stateTouched = true">
+            <option value="" disabled>Choose your state</option>
+            <option v-for="st in NG_STATES" :key="st.name" :value="st.name">{{ stateLabel(st.name) }}</option>
+          </select>
+          <span v-if="biz.state && !stateTouched" class="text-xs text-muted">Suggested from your map pin. Change it if it’s wrong.</span>
         </div>
         <div class="flex flex-col gap-1.5">
           <span class="label">Where shoppers can find you</span>

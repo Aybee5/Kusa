@@ -43,6 +43,8 @@ export const vendors = pgTable('vendors', {
   logoImageKey: text('logo_image_key'),
   area: text('area').notNull().default(''),
   city: text('city').notNull().default('Kano'),
+  /** One of the 36 states or FCT (shared/utils/states.ts). */
+  state: text('state').notNull().default('Kano'),
   landmark: text('landmark'),
   lat: doublePrecision('lat').notNull(),
   lng: doublePrecision('lng').notNull(),
@@ -75,6 +77,7 @@ export const vendors = pgTable('vendors', {
   uniqueIndex('vendors_slug_idx').on(t.slug),
   uniqueIndex('vendors_owner_idx').on(t.ownerId),
   index('vendors_status_idx').on(t.status),
+  index('vendors_state_city_idx').on(t.status, t.state, t.city),
   // Bounding-box prefilter for "near me" searches.
   index('vendors_lat_lng_idx').on(t.lat, t.lng),
   // "Top rated" and the minimum-rating filter.

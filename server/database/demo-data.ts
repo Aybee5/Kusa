@@ -12,7 +12,7 @@ const at = (dLatKm: number, dLngKm: number) => ({
 const hours = (opens: string, closes: string, closedDays: number[] = []) => ({ opens, closes, closedDays })
 const docs = (idType = 'NIN slip', hasSelfie = true, hasBusinessProof = true) => ({ idType, hasSelfie, hasBusinessProof })
 
-type DemoVendor = Omit<Vendor, 'instagram' | 'showPhone' | 'primaryContact'> & Partial<Pick<Vendor, 'instagram' | 'showPhone' | 'primaryContact'>>
+type DemoVendor = Omit<Vendor, 'instagram' | 'showPhone' | 'primaryContact' | 'state'> & Partial<Pick<Vendor, 'instagram' | 'showPhone' | 'primaryContact' | 'state'>>
 
 export const vendors: DemoVendor[] = [
   {
@@ -120,6 +120,38 @@ export const vendors: DemoVendor[] = [
 // (credits in CREDITS.md there).
 for (const v of vendors) v.coverImage = `/images/vendors/${v.slug}.webp`
 
+// A few businesses in other states, for browsing beyond Kano (no demo photos).
+vendors.push(
+  {
+    id: 'v15', slug: 'eko-small-chops-hub', name: 'Eko Small Chops Hub', ownerName: 'Tolani Adeyemi',
+    phone: '+2348170000101', whatsapp: '2348170000101', category: 'small-chops', area: 'Ikeja GRA', city: 'Ikeja', state: 'Lagos',
+    lat: 6.5833, lng: 3.3561, status: 'verified', hours: hours('08:00', '21:00'), delivery: true, pickup: true,
+    initials: 'ES', tint: '#F4B740', coverTint: '#F6E3C8', joinedAt: '2026-10-02',
+    about: 'Small chops trays for parties and office events across Ikeja and the mainland.', documents: docs(),
+  },
+  {
+    id: 'v16', slug: 'lekki-cakes-by-tolu', name: 'Lekki Cakes by Tolu', ownerName: 'Toluwani Bakare',
+    phone: '+2348170000102', whatsapp: '2348170000102', category: 'cakes', area: 'Lekki Phase 1', city: 'Lekki', state: 'Lagos',
+    lat: 6.4474, lng: 3.472, status: 'verified', hours: hours('09:00', '19:00', [0]), delivery: true, pickup: false,
+    initials: 'LC', tint: '#FBE7D9', coverTint: '#FBE7D9', joinedAt: '2026-10-05', instagram: 'lekkicakesbytolu', primaryContact: 'instagram',
+    about: 'Celebration cakes, cupcakes and dessert boxes. Three days notice for custom cakes.', documents: docs(),
+  },
+  {
+    id: 'v17', slug: 'wuse-kilishi-and-suya', name: 'Wuse Kilishi & Suya', ownerName: 'Aminu Danjuma',
+    phone: '+2348170000103', whatsapp: '2348170000103', category: 'quick-meals', area: 'Wuse 2', city: 'Abuja', state: 'FCT',
+    lat: 9.079, lng: 7.47, status: 'verified', hours: hours('15:00', '23:00'), delivery: true, pickup: true,
+    initials: 'WK', tint: '#F1D3DA', coverTint: '#F1D3DA', joinedAt: '2026-10-08',
+    about: 'Kilishi from Kano and fresh suya every evening in Wuse 2.', documents: docs(),
+  },
+  {
+    id: 'v18', slug: 'zaria-beads-and-crafts', name: 'Zaria Beads & Crafts', ownerName: 'Hauwa Sani',
+    phone: '+2348170000104', whatsapp: '2348170000104', category: 'jewellery', area: 'Samaru', city: 'Zaria', state: 'Kaduna',
+    lat: 11.1544, lng: 7.6555, status: 'verified', hours: hours('10:00', '18:00', [5]), delivery: true, pickup: true,
+    initials: 'ZB', tint: '#E4E1F2', coverTint: '#E4E1F2', joinedAt: '2026-10-10',
+    about: 'Handmade waist beads, bead bags and bridal sets, made to order.', documents: docs(),
+  },
+)
+
 let pid = 0
 // Demo photos are in public/images/products, named after the product
 // (credits in CREDITS.md there).
@@ -157,6 +189,14 @@ export const products: Product[] = [
   p('v13', 'Kunun aya, 1 litre', 1800, '#F4ECC4', 'Kunun aya', 'Tiger nut drink with dates and coconut.'),
   p('v14', 'Bridal henna, both hands', 25000, '#EFE0EC', 'Bridal henna', 'Full bridal design, hands and wrists.'),
   p('v14', 'Party henna, one hand', 5000, '#F3D6CC', 'Party henna', 'Simple floral design for parties.'),
+  p('v15', 'Party tray, 50 guests', 30000, '#F6E3C8', 'Party tray', 'Puff-puff, samosa, spring rolls, chicken and gizzard for 50 guests.', { image: undefined }),
+  p('v15', 'Small chops box', 3500, '#F4ECC4', 'Small chops box', 'Single-portion box for office lunches.', { image: undefined }),
+  p('v16', 'Celebration cake, 8 inch', 45000, '#FBE7D9', 'Celebration cake', 'Two-layer cake in your choice of flavour and colours.', { image: undefined }),
+  p('v16', 'Dessert box', 12000, '#EFE0EC', 'Dessert box', 'Cupcakes, brownies and parfait in a gift box.', { image: undefined }),
+  p('v17', 'Kilishi, 500 g', 12000, '#F1D3DA', 'Kilishi', 'Spiced dried beef, freshly packed.', { image: undefined }),
+  p('v17', 'Beef suya, 1 portion', 3000, '#FBE7D9', 'Beef suya', 'With onions, tomatoes and yaji.', { image: undefined }),
+  p('v18', 'Waist beads, set of 3', 7500, '#E4E1F2', 'Waist beads', 'Choose your colours; made to your size.', { image: undefined }),
+  p('v18', 'Bead bag', 15000, '#D9EBE6', 'Bead bag', 'Hand-beaded clutch bag.', { image: undefined }),
 ]
 
 /**
@@ -175,6 +215,10 @@ export const seedRatings: Record<string, [number, number, number, number, number
   v12: [36, 9, 2, 1, 0],
   v13: [22, 10, 3, 1, 1],
   v14: [28, 4, 1, 0, 0],
+  v15: [20, 8, 2, 1, 0],
+  v16: [26, 5, 1, 0, 0],
+  v17: [18, 9, 3, 1, 1],
+  v18: [12, 4, 1, 0, 0],
 }
 
 export const shoppers: Omit<Shopper, 'email'>[] = [

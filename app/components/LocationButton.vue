@@ -5,13 +5,13 @@ const open = ref(false)
 
 const lead = computed(() => {
   switch (location.value.source) {
-    case 'anywhere': return 'Showing businesses'
+    case 'anywhere': return 'Showing businesses in'
     case 'device': return 'Showing businesses near'
     case 'default': return 'Default area · tap to change'
     default: return 'Showing businesses in'
   }
 })
-const label = computed(() => (location.value.source === 'anywhere' ? 'Anywhere' : location.value.label))
+const label = computed(() => (location.value.source === 'anywhere' ? 'All Nigeria' : location.value.label))
 </script>
 
 <template>

@@ -51,6 +51,8 @@ export interface Vendor {
   category: CategoryId
   area: string
   city: string
+  /** One of the 36 states or FCT. */
+  state: string
   landmark?: string
   lat: number
   lng: number
@@ -192,4 +194,7 @@ export interface SearchFilters {
   pickup: boolean
   radiusKm: number
   sort: SortKey
+  /** Only businesses in this state (and city), e.g. when browsing Lagos without a location. */
+  state?: string
+  city?: string
 }

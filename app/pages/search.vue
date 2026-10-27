@@ -4,7 +4,14 @@ import type { CategoryId, SearchFilters, SortKey } from '#shared/types'
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
-const { origin, location, choosePoint } = useLocation()
+const { origin, location, place, choosePoint, choosePlace, browseAnywhere } = useLocation()
+
+// A link with ?state=Lagos(&city=Ikeja) opens on that place, e.g. a shared search.
+const linkState = findState(String(route.query.state ?? ''))
+if (linkState) {
+  const linkCity = typeof route.query.city === 'string' && route.query.city.trim() ? route.query.city.trim() : undefined
+  if (place.value?.state !== linkState || (place.value?.city ?? '') !== (linkCity ?? '')) await choosePlace({ state: linkState, city: linkCity })
+}
 
 const str = (v: unknown, d = '') => (typeof v === 'string' ? v : d)
 const num = (v: unknown, d: number) => (typeof v === 'string' && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : d)
@@ -23,8 +30,12 @@ const filters = reactive<SearchFilters>({
 })
 
 // Keep the URL in step with the filters so results can be shared and the back button works.
-watch(filters, (f) => {
+function syncQuery(f: SearchFilters) {
   const query: Record<string, string> = {}
+  if (place.value) {
+    query.state = place.value.state
+    if (place.value.city) query.city = place.value.city
+  }
   if (f.q) query.q = f.q
   if (f.category) query.category = f.category
   if (f.minRating) query.rating = String(f.minRating)
@@ -34,7 +45,9 @@ watch(filters, (f) => {
   if (f.radiusKm !== 5) query.radius = String(f.radiusKm)
   if (f.sort !== 'nearest') query.sort = f.sort
   router.replace({ query })
-}, { deep: true })
+}
+watch(filters, syncQuery, { deep: true })
+watch(place, () => syncQuery(filters))
 
 const debouncedQ = ref(filters.q)
 let qTimer: ReturnType<typeof setTimeout> | undefined
@@ -45,15 +58,15 @@ watch(() => filters.q, (v) => {
 
 const { data: results, status } = await useAsyncData(
   'search',
-  () => api.searchVendors({ ...filters, q: debouncedQ.value }, origin.value),
-  { watch: [debouncedQ, () => filters.category, () => filters.minRating, () => filters.openNow, () => filters.delivery, () => filters.pickup, () => filters.radiusKm, () => filters.sort, origin] },
+  () => api.searchVendors({ ...filters, q: debouncedQ.value, state: place.value?.state, city: place.value?.city }, origin.value),
+  { watch: [debouncedQ, () => filters.category, () => filters.minRating, () => filters.openNow, () => filters.delivery, () => filters.pickup, () => filters.radiusKm, () => filters.sort, origin, place] },
 )
 
 // Sponsored slots for the same search (they follow the filters; distance is relaxed and shown on the card).
 const { data: promoted } = await useAsyncData(
   'search-promoted',
-  () => api.promoted('search', { ...filters, q: debouncedQ.value }, origin.value).catch(() => null),
-  { watch: [debouncedQ, () => filters.category, () => filters.minRating, () => filters.openNow, () => filters.delivery, () => filters.pickup, origin] },
+  () => api.promoted('search', { ...filters, q: debouncedQ.value, state: place.value?.state, city: place.value?.city }, origin.value).catch(() => null),
+  { watch: [debouncedQ, () => filters.category, () => filters.minRating, () => filters.openNow, () => filters.delivery, () => filters.pickup, origin, place] },
 )
 const sponsoredIds = computed(() => new Set(promoted.value?.featured.map((v) => v.id)))
 const organic = computed(() => (results.value ?? []).filter((v) => !sponsoredIds.value.has(v.id)))
@@ -76,8 +89,10 @@ const anywhere = computed(() => !origin.value)
 const heading = computed(() => {
   const what = filters.category ? categoryLabel(filters.category) : filters.q ? `“${filters.q}”` : 'Businesses'
   const src = location.value.source
-  const where = anywhere.value
-    ? 'everywhere'
+  const where = place.value
+    ? `in ${placeLabel(place.value)}`
+    : anywhere.value
+    ? 'in Nigeria'
     : filters.radiusKm
       ? `within ${filters.radiusKm} km`
       : src === 'device' ? 'near you' : `near ${location.value.label.split(',')[0]}`
@@ -111,6 +126,8 @@ function onSelect(id: string) {
     navigateTo({ path: `/v/${v.slug}`, query: { from: 'map' } })
   }
 }
+
+const hasFilters = computed(() => !!(filters.q || filters.category || filters.minRating || filters.openNow || filters.delivery || filters.pickup))
 
 function clearFilters() {
   Object.assign(filters, { q: '', category: '', minRating: 0, openNow: false, delivery: false, pickup: false, radiusKm: 0 })
@@ -181,8 +198,10 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
         </div>
         <div v-else-if="!results?.length" class="flex flex-col items-center gap-3 py-12 text-center">
           <AppIcon name="search" :size="32" class="text-muted" />
-          <p class="max-w-[300px] text-[15px] text-ink-2">No businesses match these filters {{ anywhere ? 'yet' : 'here yet' }}. Try {{ anywhere ? 'fewer filters' : 'a wider distance, another area or fewer filters' }}.</p>
-          <button type="button" class="btn-outline" @click="clearFilters">Clear filters</button>
+          <p v-if="place && !hasFilters" class="max-w-[320px] text-[15px] text-ink-2">No businesses in {{ placeLabel(place) }} on Kusa yet. Try another {{ place.city ? 'city' : 'state' }}, or see all of Nigeria.</p>
+          <p v-else class="max-w-[300px] text-[15px] text-ink-2">No businesses match these filters {{ anywhere ? 'yet' : 'here yet' }}. Try {{ anywhere ? 'fewer filters' : 'a wider distance, another area or fewer filters' }}.</p>
+          <button v-if="place && !hasFilters" type="button" class="btn-outline" @click="browseAnywhere()">See all of Nigeria</button>
+          <button v-else type="button" class="btn-outline" @click="clearFilters">Clear filters</button>
         </div>
         <div v-else class="flex flex-col lg:gap-1">
           <PromoSlot v-for="v in promoted?.featured" :key="v.promotionId" :promotion-id="v.promotionId" class="border-t border-line first:border-t-0 lg:border-t-0">

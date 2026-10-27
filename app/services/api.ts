@@ -20,7 +20,7 @@ export interface KusaApi {
   getVendor(slug: string, origin: LatLng | null): Promise<VendorWithMeta | null>
   listProducts(vendorId: string): Promise<Product[]>
   getProduct(id: string, origin: LatLng | null): Promise<ProductWithVendor | null>
-  latestProducts(origin: LatLng | null, limit: number): Promise<ProductWithVendor[]>
+  latestProducts(origin: LatLng | null, limit: number, place?: { state: string; city?: string } | null): Promise<ProductWithVendor[]>
   listAreas(): Promise<Area[]>
   listReviews(vendorId: string): Promise<PublicReview[]>
   myReview(vendorId: string): Promise<Review | null>
@@ -29,7 +29,8 @@ export interface KusaApi {
   recordEvent(vendorId: string, event: TrafficEvent, opts?: { firstVisitToday?: boolean; productId?: string; source?: TrafficSourceKey }): Promise<void>
 
   // Sponsored placements
-  promoted(placement: 'home' | 'search', filters: SearchFilters | null, origin: LatLng | null): Promise<Promoted>
+  /** filters may include a state/city to browse. */
+  promoted(placement: 'home' | 'search', filters: Partial<SearchFilters> | null, origin: LatLng | null): Promise<Promoted>
   recordPromotionEvent(promotionId: string, event: 'impression' | 'click'): Promise<void>
 
   // Auth

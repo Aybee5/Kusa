@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { CATEGORIES } from '#shared/utils/catalog'
+import { STATE_NAMES } from '#shared/utils/states'
 
 const Time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 09:00')
 const Body = z.object({
@@ -9,6 +10,7 @@ const Body = z.object({
   about: z.string().trim().max(600).optional(),
   area: z.string().trim().min(2).max(60).optional(),
   city: z.string().trim().min(2).max(60).optional(),
+  state: z.enum(STATE_NAMES).optional(),
   landmark: z.string().trim().max(120).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),

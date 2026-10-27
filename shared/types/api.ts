@@ -31,7 +31,7 @@ export interface AdminVendor extends Vendor {
   reviewNote?: string
 }
 
-export interface Area { city: string; area: string; lat: number; lng: number; count: number }
+export interface Area { state: string; city: string; area: string; lat: number; lng: number; count: number }
 
 /** How shoppers reach a business. */
 export interface ContactInput {
@@ -48,6 +48,8 @@ export interface NewVendorInput extends ContactInput {
   category: CategoryId
   area: string
   city: string
+  /** Guessed from the pin when left out. */
+  state?: string
   landmark: string
   lat: number
   lng: number
@@ -87,6 +89,7 @@ export interface VendorUpdate extends Partial<ContactInput> {
   about?: string
   area?: string
   city?: string
+  state?: string
   landmark?: string
   lat?: number
   lng?: number

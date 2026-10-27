@@ -1,0 +1,78 @@
+ALTER TABLE "vendors" ADD COLUMN "state" text DEFAULT 'Kano' NOT NULL;--> statement-breakpoint
+CREATE INDEX "vendors_state_city_idx" ON "vendors" USING btree ("status","state","city");
+--> statement-breakpoint
+-- Existing businesses: the state whose name or capital (or a known big city)
+-- matches their city, otherwise the state whose capital is nearest their pin.
+-- Vendors can correct it in My shop.
+WITH states(name, capital, lat, lng) AS (VALUES
+    ('Abia', 'umuahia', 5.5333, 7.4833),
+    ('Adamawa', 'yola', 9.2035, 12.4954),
+    ('Akwa Ibom', 'uyo', 5.0377, 7.9128),
+    ('Anambra', 'awka', 6.2104, 7.0741),
+    ('Bauchi', 'bauchi', 10.3158, 9.8442),
+    ('Bayelsa', 'yenagoa', 4.9267, 6.2676),
+    ('Benue', 'makurdi', 7.7322, 8.5391),
+    ('Borno', 'maiduguri', 11.8311, 13.151),
+    ('Cross River', 'calabar', 4.9757, 8.3417),
+    ('Delta', 'asaba', 6.198, 6.7319),
+    ('Ebonyi', 'abakaliki', 6.3249, 8.1137),
+    ('Edo', 'benin city', 6.335, 5.6037),
+    ('Ekiti', 'ado-ekiti', 7.6211, 5.2214),
+    ('Enugu', 'enugu', 6.4584, 7.5464),
+    ('FCT', 'abuja', 9.0765, 7.3986),
+    ('Gombe', 'gombe', 10.2897, 11.1673),
+    ('Imo', 'owerri', 5.484, 7.0351),
+    ('Jigawa', 'dutse', 11.7562, 9.3388),
+    ('Kaduna', 'kaduna', 10.5105, 7.4165),
+    ('Kano', 'kano', 12.0022, 8.592),
+    ('Katsina', 'katsina', 12.9908, 7.6018),
+    ('Kebbi', 'birnin kebbi', 12.4539, 4.1975),
+    ('Kogi', 'lokoja', 7.8023, 6.7333),
+    ('Kwara', 'ilorin', 8.4966, 4.5421),
+    ('Lagos', 'ikeja', 6.5244, 3.3792),
+    ('Nasarawa', 'lafia', 8.4939, 8.5153),
+    ('Niger', 'minna', 9.6139, 6.5569),
+    ('Ogun', 'abeokuta', 7.1475, 3.3619),
+    ('Ondo', 'akure', 7.2571, 5.2058),
+    ('Osun', 'osogbo', 7.7827, 4.5418),
+    ('Oyo', 'ibadan', 7.3775, 3.947),
+    ('Plateau', 'jos', 9.8965, 8.8583),
+    ('Rivers', 'port harcourt', 4.8156, 7.0498),
+    ('Sokoto', 'sokoto', 13.0059, 5.2476),
+    ('Taraba', 'jalingo', 8.8937, 11.3596),
+    ('Yobe', 'damaturu', 11.747, 11.9608),
+    ('Zamfara', 'gusau', 12.1704, 6.6641)
+), cities(state, city) AS (VALUES
+    ('Lagos', 'lagos'),
+    ('Lagos', 'lekki'),
+    ('Lagos', 'victoria island'),
+    ('Lagos', 'surulere'),
+    ('Lagos', 'yaba'),
+    ('Lagos', 'ikorodu'),
+    ('Lagos', 'ajah'),
+    ('Kaduna', 'zaria'),
+    ('Oyo', 'ogbomoso'),
+    ('Ogun', 'ijebu ode'),
+    ('Ogun', 'sagamu'),
+    ('Rivers', 'port-harcourt'),
+    ('Rivers', 'ph'),
+    ('Anambra', 'onitsha'),
+    ('Anambra', 'nnewi'),
+    ('Delta', 'warri'),
+    ('Delta', 'sapele'),
+    ('Edo', 'benin'),
+    ('Abia', 'aba'),
+    ('FCT', 'gwagwalada'),
+    ('FCT', 'kubwa'),
+    ('Kano', 'wudil'),
+    ('Katsina', 'funtua'),
+    ('Bauchi', 'azare'),
+    ('Plateau', 'bukuru'),
+    ('Niger', 'suleja'),
+    ('Kwara', 'offa')
+)
+UPDATE vendors v SET state = COALESCE(
+  (SELECT s.name FROM states s WHERE lower(trim(v.city)) IN (lower(s.name), s.capital) LIMIT 1),
+  (SELECT c.state FROM cities c WHERE lower(trim(v.city)) = c.city LIMIT 1),
+  (SELECT s.name FROM states s ORDER BY (s.lat - v.lat) ^ 2 + ((s.lng - v.lng) * cos(radians(v.lat))) ^ 2 LIMIT 1)
+);

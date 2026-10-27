@@ -58,7 +58,7 @@ export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = cons
     await tx.insert(vendorsT).values(vendors.map((v) => ({
       id: v.id, ownerId: `owner-${v.id}`, slug: v.slug, name: v.name, category: v.category, phone: v.phone, whatsapp: v.whatsapp,
       ...CONTACTS[v.id],
-      area: v.area, city: v.city, landmark: v.landmark, lat: v.lat, lng: v.lng, status: v.status, suspensionReason: v.suspensionReason,
+      area: v.area, city: v.city, state: v.state ?? 'Kano', landmark: v.landmark, lat: v.lat, lng: v.lng, status: v.status, suspensionReason: v.suspensionReason,
       opens: v.hours.opens, closes: v.hours.closes, closedDays: v.hours.closedDays, delivery: v.delivery, pickup: v.pickup,
       about: v.about, tint: v.tint, coverTint: v.coverTint, coverImageKey: v.coverImage ?? null, idType: v.documents.idType || null,
       createdAt: asDate(v.joinedAt), submittedAt: v.submittedAt ? asDate(v.submittedAt) : asDate(v.joinedAt),

@@ -1,6 +1,7 @@
 import { eq, like } from 'drizzle-orm'
 import { z } from 'zod'
 import { CATEGORIES, slugify } from '#shared/utils/catalog'
+import { guessState, STATE_NAMES } from '#shared/utils/states'
 
 const Body = z.object({
   name: z.string().trim().min(2).max(80),
@@ -8,6 +9,7 @@ const Body = z.object({
   ...ContactFields,
   area: z.string().trim().min(2, 'Enter your area or neighbourhood').max(60),
   city: z.string().trim().min(2).max(60).default('Kano'),
+  state: z.enum(STATE_NAMES).optional(),
   landmark: z.string().trim().max(120).default(''),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
@@ -37,7 +39,7 @@ export default defineEventHandler(async (event) => {
   const vendor = await db.transaction(async (tx) => {
     const [v] = await tx.insert(vendors).values({
       ownerId: user.id, slug, name: body.name, category: body.category, ...contacts,
-      area: body.area, city: body.city, landmark: body.landmark || null,
+      area: body.area, city: body.city, state: body.state ?? guessState(body), landmark: body.landmark || null,
       lat: body.lat, lng: body.lng, delivery: body.delivery, pickup: body.pickup, coverTint: COVER[body.category] ?? '#F6E3C8',
     }).returning()
     const [u] = await tx.update(users).set({ role: 'vendor' }).where(eq(users.id, user.id)).returning()

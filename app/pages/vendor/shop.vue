@@ -2,6 +2,7 @@
 import type { CategoryId, Vendor } from '#shared/types'
 import type { LatLng, VendorUpdate } from '#shared/types/api'
 import type { ContactDraft } from '~/utils/contact-draft'
+import { NG_STATES, stateLabel } from '#shared/utils/states'
 
 definePageMeta({ layout: 'vendor' })
 
@@ -13,7 +14,7 @@ const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ?
 
 // The form, filled from the saved business.
 const form = reactive({
-  name: '', category: 'small-chops' as CategoryId, about: '', area: '', city: '', landmark: '',
+  name: '', category: 'small-chops' as CategoryId, about: '', area: '', city: '', state: '', landmark: '',
   delivery: true, pickup: true, opens: '09:00', closes: '18:00', closedDays: [] as number[],
 })
 const contact = ref<ContactDraft>(newContactDraft())
@@ -24,7 +25,7 @@ const logo = ref<Img>({ url: null })
 
 function fill(v: Vendor) {
   Object.assign(form, {
-    name: v.name, category: v.category, about: v.about, area: v.area, city: v.city, landmark: v.landmark ?? '',
+    name: v.name, category: v.category, about: v.about, area: v.area, city: v.city, state: v.state, landmark: v.landmark ?? '',
     delivery: v.delivery, pickup: v.pickup, opens: v.hours.opens, closes: v.hours.closes, closedDays: [...v.hours.closedDays],
   })
   contact.value = contactDraftFrom(v)
@@ -82,7 +83,7 @@ async function save() {
   try {
     const changes: VendorUpdate = {
       name: form.name.trim(), category: form.category, about: form.about.trim(),
-      area: form.area.trim(), city: form.city.trim(), landmark: form.landmark.trim(),
+      area: form.area.trim(), city: form.city.trim(), state: form.state, landmark: form.landmark.trim(),
       lat: pin.value!.lat, lng: pin.value!.lng, delivery: form.delivery, pickup: form.pickup,
       hours: { opens: form.opens, closes: form.closes, closedDays: form.closedDays },
       ...contactInput(contact.value),
@@ -209,9 +210,15 @@ useSeoMeta({ title: 'My shop · Kusa', robots: 'noindex' })
             <input id="s-area" v-model="form.area" type="text" class="field" />
           </div>
           <div class="flex min-w-0 flex-col gap-1.5">
-            <label for="s-city" class="label">City</label>
+            <label for="s-city" class="label">City or town</label>
             <input id="s-city" v-model="form.city" type="text" class="field" />
           </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="s-state" class="label">State</label>
+          <select id="s-state" v-model="form.state" class="field">
+            <option v-for="st in NG_STATES" :key="st.name" :value="st.name">{{ stateLabel(st.name) }}</option>
+          </select>
         </div>
         <div class="relative h-[220px] overflow-hidden rounded-2xl border border-[#E0D8C6]">
           <ClientOnly>

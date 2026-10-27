@@ -36,6 +36,13 @@
       "when": 1793093254492,
       "tag": "0004_email_contacts_shop",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793139607237,
+      "tag": "0005_vendor_state",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,7 @@ export function toVendor(v: VendorRow, ownerName = ''): Vendor {
     category: v.category as CategoryId,
     area: v.area,
     city: v.city,
+    state: v.state,
     landmark: v.landmark ?? undefined,
     lat: v.lat,
     lng: v.lng,
@@ -111,6 +112,15 @@ export async function findPublicVendor(key: string): Promise<VendorRow | null> {
 
 export const SEARCH_LIMIT = 100
 
+/** WHERE clauses for browsing a state and, optionally, a city in it. */
+export function inPlace(place: { state?: string; city?: string }): SQL[] {
+  const { vendors } = schema
+  const out: SQL[] = []
+  if (place.state) out.push(eq(vendors.state, place.state))
+  if (place.city) out.push(sql`lower(trim(${vendors.city})) = lower(${place.city.trim()})`)
+  return out
+}
+
 /**
  * Search verified businesses. Every filter and the sort run in the database,
  * so the result limit always keeps the right businesses however many match.
@@ -131,6 +141,7 @@ export async function searchVendors(
   if (f.delivery) where.push(eq(vendors.delivery, true))
   if (f.pickup) where.push(eq(vendors.pickup, true))
   if (f.minRating) where.push(gte(vendors.ratingAvg, f.minRating))
+  where.push(...inPlace(f))
   if (f.openNow) where.push(openAt(now))
   if (origin && f.radiusKm) where.push(...withinRadius(origin, f.radiusKm))
   const q = f.q.trim()

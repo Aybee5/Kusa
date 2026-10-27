@@ -2,28 +2,29 @@
 import type { SearchFilters } from '#shared/types'
 
 const api = useApi()
-const { origin } = useLocation()
+const { origin, place } = useLocation()
 
 const nearbyFilters: SearchFilters = {
   q: '', category: '', minRating: 0, openNow: false, verifiedOnly: true, delivery: false, pickup: false, radiusKm: 0, sort: 'nearest',
 }
 
 const { data: nearby } = await useAsyncData('home-nearby', async () => {
-  const all = await api.searchVendors(nearbyFilters, origin.value)
+  const all = await api.searchVendors({ ...nearbyFilters, state: place.value?.state, city: place.value?.city }, origin.value)
   const open = all.filter((v) => v.openState.open)
   return (open.length >= 4 ? open : all).slice(0, 8)
-}, { watch: [origin] })
+}, { watch: [origin, place] })
 
 const anyOpen = computed(() => nearby.value?.some((v) => v.openState.open) ?? false)
 const nearbyTitle = computed(() => {
+  if (place.value) return `${anyOpen.value ? 'Open now in' : 'Top rated in'} ${placeLabel(place.value)}`
   if (!origin.value) return anyOpen.value ? 'Open now, top rated' : 'Top rated on Kusa'
   return anyOpen.value ? 'Open now, close to you' : 'Close to you'
 })
 
-const { data: fresh } = await useAsyncData('home-fresh', () => api.latestProducts(origin.value, 4), { watch: [origin] })
+const { data: fresh } = await useAsyncData('home-fresh', () => api.latestProducts(origin.value, 4, place.value), { watch: [origin, place] })
 
 // Sponsored slots, targeted to the city being browsed. A failure here never breaks the page.
-const { data: promoted } = await useAsyncData('home-promoted', () => api.promoted('home', null, origin.value).catch(() => null), { watch: [origin] })
+const { data: promoted } = await useAsyncData('home-promoted', () => api.promoted('home', place.value, origin.value).catch(() => null), { watch: [origin, place] })
 const sponsoredProduct = computed(() => promoted.value?.products[0] ?? null)
 const freshList = computed(() => (fresh.value ?? []).filter((i) => i.product.id !== sponsoredProduct.value?.product.id).slice(0, sponsoredProduct.value ? 3 : 4))
 
@@ -84,7 +85,7 @@ function search() {
     <section class="flex flex-col gap-2.5 lg:gap-4">
       <div class="flex items-baseline justify-between gap-3">
         <h2 class="text-[17px] font-bold lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{{ nearbyTitle }}</h2>
-        <NuxtLink to="/search" class="py-2.5 text-sm font-bold lg:text-[15px]">See map</NuxtLink>
+        <NuxtLink :to="{ path: '/search', query: place ? { state: place.state, ...(place.city ? { city: place.city } : {}) } : {} }" class="py-2.5 text-sm font-bold lg:text-[15px]">{{ place ? 'See all' : 'See map' }}</NuxtLink>
       </div>
       <div class="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 lg:mx-0 lg:grid lg:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] lg:gap-4 lg:overflow-visible lg:px-0">
         <VendorCard v-for="v in nearby" :key="v.id" :vendor="v" class="w-[232px] shrink-0 lg:w-auto" />
@@ -104,7 +105,7 @@ function search() {
     </section>
 
     <section class="flex flex-col gap-1 lg:gap-4">
-      <h2 class="mb-1.5 text-[17px] font-bold lg:mb-0 lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">Just listed nearby</h2>
+      <h2 class="mb-1.5 text-[17px] font-bold lg:mb-0 lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{{ place ? `Just listed in ${placeLabel(place)}` : origin ? 'Just listed nearby' : 'Just listed on Kusa' }}</h2>
       <div class="flex flex-col lg:grid lg:grid-cols-[repeat(auto-fill,minmax(360px,1fr))] lg:gap-3">
         <PromoSlot v-if="sponsoredProduct" :promotion-id="sponsoredProduct.promotionId">
           <ProductRow :item="sponsoredProduct" sponsored />

@@ -42,9 +42,10 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     if (e.cause?.statusCode === 404) return null
     throw e
   })
-  const searchQuery = (f: SearchFilters) => ({
+  const searchQuery = (f: Partial<SearchFilters>) => ({
     q: f.q || undefined, category: f.category || undefined, minRating: f.minRating || undefined, openNow: f.openNow || undefined,
     delivery: f.delivery || undefined, pickup: f.pickup || undefined, radiusKm: f.radiusKm || undefined, sort: f.sort,
+    state: f.state || undefined, city: f.city || undefined,
   })
 
   return {
@@ -52,7 +53,7 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     getVendor: (slug, origin) => orNull(call(`/vendors/${encodeURIComponent(slug)}`, { query: { ...origin } })),
     listProducts: (vendorId) => call(`/vendors/${vendorId}/products`),
     getProduct: (id, origin) => orNull(call(`/products/${encodeURIComponent(id)}`, { query: { ...origin } })),
-    latestProducts: (origin, limit) => call('/products/latest', { query: { ...origin, limit } }),
+    latestProducts: (origin, limit, place) => call('/products/latest', { query: { ...origin, limit, state: place?.state, city: place?.city } }),
     listAreas: () => call('/areas'),
     listReviews: (vendorId) => call(`/vendors/${vendorId}/reviews`),
     myReview: (vendorId) => call(`/vendors/${vendorId}/reviews/mine`),

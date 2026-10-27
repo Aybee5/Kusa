@@ -2,23 +2,32 @@ import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
 import type { Area, LatLng } from '#shared/types/api'
 import { DEFAULT_LOCATION } from '#shared/utils/catalog'
+import { stateLabel } from '#shared/utils/states'
 import { storage } from '~/utils/storage'
 
 const KEY = 'kusa:location'
 
-export type LocationSource = 'default' | 'device' | 'area' | 'map' | 'anywhere'
+export type LocationSource = 'default' | 'device' | 'area' | 'map' | 'anywhere' | 'place'
+
+/** A state, or a city in a state, to browse without a location. */
+export interface Place { state: string; city?: string }
 
 export interface UserLocation {
   lat: number
   lng: number
   label: string
   source: LocationSource
+  /** Set when source is "place". */
+  place?: Place
 }
+
+export const placeLabel = (p: Place) => (p.city ? `${p.city}, ${stateLabel(p.state)}` : stateLabel(p.state))
 
 /**
  * Where "near me" is measured from. Shoppers can share their location, pick
- * an area, search the part of the map they're looking at, or browse anywhere
- * without distances. Until they choose, results are sorted from a default
+ * a neighbourhood, search the part of the map they're looking at, browse a
+ * state or city (like a classifieds site, no location needed), or browse all
+ * of Nigeria without distances. Until they choose, results are sorted from a default
  * area. The choice stays on the device; the server only receives the point
  * with each search and doesn't store it.
  */
@@ -67,13 +76,17 @@ export function useLocation() {
 
   const chooseArea = (a: Area) => set({ lat: a.lat, lng: a.lng, label: `${a.area}, ${a.city}`, source: 'area' })
   const choosePoint = (p: LatLng, label = 'Map area') => set({ ...p, label, source: 'map' })
-  const browseAnywhere = () => set({ ...location.value, label: 'Anywhere', source: 'anywhere' })
+  const browseAnywhere = () => set({ ...location.value, label: 'All Nigeria', source: 'anywhere', place: undefined })
+  /** Browse one state, or a city in it: only businesses there, best rated first. */
+  const choosePlace = (p: Place) => set({ ...location.value, label: placeLabel(p), source: 'place', place: { state: p.state, ...(p.city ? { city: p.city } : {}) } })
   const reset = () => set({ ...DEFAULT_LOCATION, source: 'default' })
 
-  /** The point searches are measured from, or null when browsing anywhere. */
+  /** The point searches are measured from, or null when browsing a place or all of Nigeria. */
   const origin = computed<LatLng | null>(() =>
-    location.value.source === 'anywhere' ? null : { lat: location.value.lat, lng: location.value.lng },
+    location.value.source === 'anywhere' || location.value.source === 'place' ? null : { lat: location.value.lat, lng: location.value.lng },
   )
+  /** The state (and city) being browsed, if any. */
+  const place = computed<Place | null>(() => (location.value.source === 'place' ? location.value.place ?? null : null))
 
-  return { location, origin, locating, error, load, locate, chooseArea, choosePoint, browseAnywhere, reset }
+  return { location, origin, place, locating, error, load, locate, chooseArea, choosePoint, browseAnywhere, choosePlace, reset }
 }

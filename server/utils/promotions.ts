@@ -149,7 +149,10 @@ export async function shopperCity(origin: LatLng | null): Promise<string | null 
 }
 
 /** Running promotions of one kind for a city and category. */
-function liveWhere(kind: PromotionKind, city: string | null | undefined, category: string, now: Date): SQL {
+/** City targeting: undefined = any city, null = only "all cities" promotions, else those cities (or all cities). */
+type CityTarget = string | string[] | null | undefined
+
+function liveWhere(kind: PromotionKind, city: CityTarget, category: string, now: Date): SQL {
   const { promotions: p } = schema
   return and(
     eq(p.status, 'approved'),
@@ -157,7 +160,9 @@ function liveWhere(kind: PromotionKind, city: string | null | undefined, categor
     lte(p.startsAt, now),
     gt(p.endsAt, now),
     // Browsing anywhere sees every city; otherwise everywhere-promotions plus that city's.
-    city === undefined ? undefined : city === null ? isNull(p.city) : or(isNull(p.city), sql`lower(${p.city}) = lower(${city})`),
+    city === undefined ? undefined
+      : city === null || (Array.isArray(city) && !city.length) ? isNull(p.city)
+        : or(isNull(p.city), inArray(sql`lower(${p.city})`, (Array.isArray(city) ? city : [city]).map((c) => c.toLowerCase()))),
     // Category-targeted promotions only show when that category is being browsed.
     category ? or(isNull(p.category), eq(p.category, category)) : isNull(p.category),
   )!
@@ -191,20 +196,29 @@ const LIMITS = {
  */
 export async function promotedFor(placement: 'home' | 'search', f: SearchFilters, origin: LatLng | null): Promise<Promoted> {
   const now = new Date()
-  const city = await shopperCity(origin)
+  // Browsing a place targets that city, or every city in that state; otherwise the city nearest the origin.
+  const city: CityTarget = f.city ? f.city : f.state ? await citiesIn(f.state) : await shopperCity(origin)
   const limits = LIMITS[placement]
   const filters: SearchFilters = placement === 'home'
-    ? { q: '', category: '', minRating: 0, openNow: false, verifiedOnly: true, delivery: false, pickup: false, radiusKm: 0, sort: 'nearest' }
+    ? { q: '', category: '', minRating: 0, openNow: false, verifiedOnly: true, delivery: false, pickup: false, radiusKm: 0, sort: 'nearest', state: f.state, city: f.city }
     : { ...f, radiusKm: 0 }
   const [featured, banners, products] = await Promise.all([
     featuredVendors(filters, origin, city, now, limits.featured),
-    bannerAds(filters.category, city, now, limits.banners),
+    bannerAds(filters, city, now, limits.banners),
     promotedProducts(filters, origin, city, now, limits.products),
   ])
   return { featured, banners, products }
 }
 
-async function featuredVendors(f: SearchFilters, origin: LatLng | null, city: string | null | undefined, now: Date, limit: number): Promise<PromotedVendor[]> {
+/** Cities with verified businesses in a state. */
+async function citiesIn(state: string): Promise<string[]> {
+  const { vendors } = schema
+  const rows = await useDb().selectDistinct({ city: sql<string>`trim(${vendors.city})` }).from(vendors)
+    .where(and(eq(vendors.status, 'verified'), eq(vendors.state, state)))
+  return rows.map((r) => r.city)
+}
+
+async function featuredVendors(f: SearchFilters, origin: LatLng | null, city: CityTarget, now: Date, limit: number): Promise<PromotedVendor[]> {
   const { promotions: p } = schema
   const live = await useDb().select({ id: p.id, vendorId: p.vendorId }).from(p).where(liveWhere('featured', city, f.category, now))
   if (!live.length) return []
@@ -215,12 +229,14 @@ async function featuredVendors(f: SearchFilters, origin: LatLng | null, city: st
     .map((l) => ({ ...byId.get(l.vendorId!)!, promotionId: l.id }))
 }
 
-async function bannerAds(category: string, city: string | null | undefined, now: Date, limit: number): Promise<PromotedBanner[]> {
+async function bannerAds(f: SearchFilters, city: CityTarget, now: Date, limit: number): Promise<PromotedBanner[]> {
   const { promotions: p, vendors: v } = schema
+  const place = inPlace(f)
   const rows = await useDb()
     .select({ p, vendorName: v.name, vendorSlug: v.slug, coverTint: v.coverTint, vendorStatus: v.status })
     .from(p).leftJoin(v, eq(v.id, p.vendorId))
-    .where(liveWhere('banner', city, category, now))
+    // A vendor's banner only shows when browsing their place; Kusa's own banners show anywhere.
+    .where(and(liveWhere('banner', city, f.category, now), place.length ? or(isNull(p.vendorId), and(...place)) : undefined))
   return onePerVendor(rows.map((r) => ({ ...r, vendorId: r.p.vendorId })))
     .filter((r) => !r.p.vendorId || r.vendorStatus === 'verified')
     .slice(0, limit)
@@ -238,9 +254,9 @@ async function bannerAds(category: string, city: string | null | undefined, now:
     })
 }
 
-async function promotedProducts(f: SearchFilters, origin: LatLng | null, city: string | null | undefined, now: Date, limit: number): Promise<PromotedProduct[]> {
+async function promotedProducts(f: SearchFilters, origin: LatLng | null, city: CityTarget, now: Date, limit: number): Promise<PromotedProduct[]> {
   const { promotions: p, products: pr, vendors: v } = schema
-  const where: (SQL | undefined)[] = [liveWhere('product', city, f.category, now), eq(pr.available, true), eq(v.status, 'verified')]
+  const where: (SQL | undefined)[] = [liveWhere('product', city, f.category, now), eq(pr.available, true), eq(v.status, 'verified'), ...inPlace(f)]
   if (f.category) where.push(eq(v.category, f.category))
   const q = f.q.trim()
   if (q) {
