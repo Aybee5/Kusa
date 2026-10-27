@@ -118,6 +118,10 @@ export const vendors: Vendor[] = [
   },
 ]
 
+// Demo cover photos are in public/images/vendors, named after the slug
+// (credits in CREDITS.md there).
+for (const v of vendors) v.cover = `/images/vendors/${v.slug}.webp`
+
 let pid = 0
 // Demo photos are in public/images/products, named after the product
 // (credits in CREDITS.md there).

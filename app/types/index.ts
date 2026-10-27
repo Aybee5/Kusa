@@ -53,6 +53,8 @@ export interface Vendor {
   initials: string
   tint: string
   coverTint: string
+  /** Cover photo URL, shown on cards and the vendor page. */
+  cover?: string
   joinedAt: string
   submittedAt?: string
   documents: VendorDocuments

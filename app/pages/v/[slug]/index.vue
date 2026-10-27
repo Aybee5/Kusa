@@ -46,6 +46,7 @@ useSeoMeta({
   ogTitle: `${v.name} on Kusa`,
   ogDescription: `${categoryLabel(v.category)} in ${v.area}, ${v.city}. ★ ${v.rating.average.toFixed(1)} (${v.rating.count} ratings)`,
   ogType: 'website',
+  ogImage: v.cover?.startsWith('/') ? `${useRuntimeConfig().public.siteUrl}${v.cover}` : v.cover,
 })
 </script>
 
@@ -53,7 +54,7 @@ useSeoMeta({
   <div v-if="vendor" class="mx-auto max-w-[1240px] pb-10 lg:px-6 lg:pt-6">
     <!-- Cover -->
     <div class="relative">
-      <PhotoBox :tint="vendor.coverTint" class="h-[188px] lg:h-64 lg:rounded-3xl" />
+      <PhotoBox :tint="vendor.coverTint" :src="vendor.cover" :alt="vendor.name" class="h-[188px] lg:h-64 lg:rounded-3xl" />
       <div class="pt-safe absolute inset-x-3 top-2.5 flex justify-between lg:inset-x-4 lg:top-4">
         <button type="button" aria-label="Back" class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-surface shadow" @click="$router.back()">
           <AppIcon name="chevron-left" :size="22" />
