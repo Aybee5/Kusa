@@ -18,3 +18,7 @@ Demo cover photos from Wikimedia Commons, resized and converted to WebP.
 | sweet-crumbs-bakery.webp | Brassluff | CC0 | https://commons.wikimedia.org/wiki/File:Different_Kinds_of_Cakes_on_display_At_BonBons_Bakery_of_Southland.jpg |
 | zobo-republic.webp | Anita ginika | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Zobo_drink_making.jpg |
 | henna-by-rahma.webp | JLTphotos | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Henna_tattoo.jpg |
+| eko-small-chops-hub.webp | James Moore200 | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Small_chops_in_a_tray_2.jpg |
+| lekki-cakes-by-tolu.webp | Shisma | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Banana_bread_slices.jpg |
+| wuse-kilishi-and-suya.webp | Zarerh | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Chicken_Grills_(Suya)_in_Northern_Nigeria_(8).jpg |
+| zaria-beads-and-crafts.webp | Amuzujoe | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Beads_Waist_0s.jpg |

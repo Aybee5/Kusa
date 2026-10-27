@@ -48,7 +48,7 @@ Useful scripts:
 
 **Shoppers** (`/`, `/search`, `/v/:slug`, `/p/:id`)
 - Discover page with categories, businesses close to you and new listings
-- Search with a map: distance, rating (3.5+, 4+, 4.5+), category, open now, delivery and pickup; sort by nearest or top rated. Filters live in the URL so results can be shared.
+- Search with a map: distance (any distance by default, or within 1–25 km), rating (3.5+, 4+, 4.5+), category, open now, delivery and pickup; sort by nearest or top rated. Filters live in the URL so results can be shared.
 - "Near me" from the device location (Capacitor Geolocation in the apps, the browser API on the web), falling back to central Kano
 - Vendor profile with cover photo and logo, products, reviews (average, star breakdown, written reviews, report) and opening hours
 - Contact buttons the vendor chooses: WhatsApp, Instagram and/or Call, with their main one first and highlighted, plus directions
@@ -143,18 +143,24 @@ The server is a standard Node app (`.output/server/index.mjs`) that needs a Post
 
 Migrations run automatically when the server starts. Leave `SEED_DEMO_DATA` unset in production.
 
-### Staging (kusa.yasr.app)
+### Staging (kusa.yasr.app) and CI/CD
 
-Staging runs on the OCI server (`ssh oci`). Caddy (`/etc/caddy/Caddyfile`) serves `kusa.yasr.app` with a Let's Encrypt certificate and a `noindex` header and proxies to `127.0.0.1:3100`; Cloudflare proxies the domain to the server (SSL mode Full). The app now needs its database, so staging runs both with `docker-compose.staging.yml` (Postgres + PostGIS, then the web/API server on `127.0.0.1:3100`, loading the demo data and demo photos into an empty database). Settings go in `~/kusa/.env.staging` on the server (from `.env.example`; at least `AUTH_SECRET`). To redeploy:
+Staging runs on the OCI server. Caddy (`/etc/caddy/Caddyfile`) serves `kusa.yasr.app` with a Let's Encrypt certificate and a `noindex` header and proxies to `127.0.0.1:3100`; Cloudflare proxies the domain to the server (SSL mode Full). `docker-compose.staging.yml` runs Postgres + PostGIS and the web/API server on `127.0.0.1:3100`, loading the demo data and photos into an empty database.
 
-```bash
-rsync -az --delete --exclude node_modules --exclude .nuxt --exclude .output --exclude .git --exclude android --exclude ios --exclude .env.staging ./ oci:~/kusa/
-ssh oci 'cd ~/kusa && docker rm -f kusa-staging 2>/dev/null; docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build'
-```
+**Every push to `main` deploys automatically** (`.github/workflows/ci-cd.yml`). Pull requests and pushes are type-checked, built and run through the API checks against a fresh PostGIS database; on `main`, once those pass, `scripts/deploy-staging.sh` copies the code to the server over SSH, rebuilds the containers and waits until `https://kusa.yasr.app/api/health` answers. You can also run it from the Actions tab (*Run workflow*) or by hand with `STAGING_HOST=… STAGING_USER=… scripts/deploy-staging.sh`.
 
-The first time, `docker rm -f kusa-staging` removes the old single container that served the earlier version, so the new stack can take port 3100.
+One-time setup:
 
-Demo photos are in `public/images` (credits in the `CREDITS.md` files there).
+1. **On the server:** Docker with the Compose plugin (`docker compose version`), and `~/kusa/.env.staging` with at least `AUTH_SECRET` (and `EMAIL_*` settings to send real sign-in codes; see `.env.example`). Create a deploy key for the user that runs Docker: `ssh-keygen -t ed25519 -f kusa-deploy -N ""` and add `kusa-deploy.pub` to that user's `~/.ssh/authorized_keys`.
+2. **In GitHub** (*Settings → Secrets and variables → Actions*), add `STAGING_HOST` (the server's IP; Cloudflare doesn't proxy SSH), `STAGING_USER`, `STAGING_SSH_KEY` (contents of `kusa-deploy`) and `STAGING_SSH_KNOWN_HOSTS` (output of `ssh-keyscan <server IP>`).
+
+The first deploy removes the old single `kusa-staging` container that served the earlier front-end-only version. Demo data is only loaded into an empty database; to reload it after changing the demo data, run `docker compose -f docker-compose.staging.yml --env-file .env.staging down -v` on the server, then redeploy (this deletes everything in the staging database).
+
+### Demo photos
+
+Photos are in `public/images` (`products`, `vendors`, `categories`), all from Wikimedia Commons with credits in each folder's `CREDITS.md`. `shared/photo-index.json` lists them (`npm run photos:index` after adding or removing any), so demo data and category tiles only use photos that exist; anything without one keeps its coloured placeholder.
+
+To fetch new ones from Commons (needs internet access to commons.wikimedia.org and upload.wikimedia.org): list them in `scripts/photo-manifest.json`, then `npm run photos:fetch -- --candidates` saves up to four freely licensed candidates per photo in `.photo-candidates/` to look at; `npm run photos:fetch -- --pick categories/drinks.webp=2` uses one (cropped to size, converted to WebP, credited). Pin a specific Commons file with `"file": "File:Name.jpg"` in the manifest and run `npm run photos:fetch`. Only CC0, CC BY, CC BY-SA and public-domain images are accepted.
 
 ## The iOS and Android apps
 

@@ -25,3 +25,6 @@ logs
 .env.*
 !.env.example
 .cloudflare
+
+# Photo candidates from npm run photos:fetch -- --candidates
+.photo-candidates

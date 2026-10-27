@@ -25,7 +25,7 @@ const filters = reactive<SearchFilters>({
   verifiedOnly: true,
   delivery: bool(route.query.delivery),
   pickup: bool(route.query.pickup),
-  radiusKm: num(route.query.radius, 5),
+  radiusKm: num(route.query.radius, 0),
   sort: (str(route.query.sort, 'nearest') as SortKey),
 })
 
@@ -42,7 +42,7 @@ function syncQuery(f: SearchFilters) {
   if (f.openNow) query.open = '1'
   if (f.delivery) query.delivery = '1'
   if (f.pickup) query.pickup = '1'
-  if (f.radiusKm !== 5) query.radius = String(f.radiusKm)
+  if (f.radiusKm) query.radius = String(f.radiusKm)
   if (f.sort !== 'nearest') query.sort = f.sort
   router.replace({ query })
 }
@@ -73,7 +73,7 @@ const organic = computed(() => (results.value ?? []).filter((v) => !sponsoredIds
 const BANNER_AFTER = 5
 
 const categoryOptions = [{ value: '' as CategoryId | '', label: 'All categories' }, ...CATEGORIES.map((c) => ({ value: c.id as CategoryId | '', label: c.label }))]
-const radiusOptions = [1, 3, 5, 10, 0].map((r) => ({ value: r, label: r ? `Within ${r} km` : 'Any distance' }))
+const radiusOptions = [0, 1, 3, 5, 10, 25].map((r) => ({ value: r, label: r ? `Within ${r} km` : 'Any distance' }))
 const ratingOptions = [
   { value: 0, label: 'Any rating' },
   { value: 3.5, label: '★ 3.5 & up' },

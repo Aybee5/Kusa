@@ -3,6 +3,7 @@
 // Relative imports so the seed script also runs outside Nuxt.
 import type { Product, Review, Shopper, Vendor, VendorStats, DailyStat } from '../../shared/types'
 import { DEFAULT_LOCATION } from '../../shared/utils/catalog'
+import { photoIfExists, photoSlug } from '../../shared/utils/photos'
 
 const at = (dLatKm: number, dLngKm: number) => ({
   lat: +(DEFAULT_LOCATION.lat + dLatKm * 0.00904).toFixed(5),
@@ -118,9 +119,8 @@ export const vendors: DemoVendor[] = [
 
 // Demo cover photos are in public/images/vendors, named after the slug
 // (credits in CREDITS.md there).
-for (const v of vendors) v.coverImage = `/images/vendors/${v.slug}.webp`
 
-// A few businesses in other states, for browsing beyond Kano (no demo photos).
+// A few businesses in other states, for browsing beyond Kano.
 vendors.push(
   {
     id: 'v15', slug: 'eko-small-chops-hub', name: 'Eko Small Chops Hub', ownerName: 'Tolani Adeyemi',
@@ -152,10 +152,14 @@ vendors.push(
   },
 )
 
+// Demo cover photos are in public/images/vendors, named after the slug
+// (credits in CREDITS.md there).
+for (const v of vendors) v.coverImage = photoIfExists(`/images/vendors/${v.slug}.webp`)
+
 let pid = 0
 // Demo photos are in public/images/products, named after the product
 // (credits in CREDITS.md there).
-const photo = (name: string) => `/images/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}.webp`
+const photo = (name: string) => photoIfExists(`/images/products/${photoSlug(name)}.webp`)
 const p = (vendorId: string, name: string, price: number, tint: string, photoLabel: string, description: string, extra: Partial<Product> = {}): Product => ({
   id: `p${++pid}`, vendorId, name, price, tint, photoLabel, image: photo(name), description, tags: [], available: true,
   createdAt: '2026-10-01', ...extra,
@@ -189,14 +193,14 @@ export const products: Product[] = [
   p('v13', 'Kunun aya, 1 litre', 1800, '#F4ECC4', 'Kunun aya', 'Tiger nut drink with dates and coconut.'),
   p('v14', 'Bridal henna, both hands', 25000, '#EFE0EC', 'Bridal henna', 'Full bridal design, hands and wrists.'),
   p('v14', 'Party henna, one hand', 5000, '#F3D6CC', 'Party henna', 'Simple floral design for parties.'),
-  p('v15', 'Party tray, 50 guests', 30000, '#F6E3C8', 'Party tray', 'Puff-puff, samosa, spring rolls, chicken and gizzard for 50 guests.', { image: undefined }),
-  p('v15', 'Small chops box', 3500, '#F4ECC4', 'Small chops box', 'Single-portion box for office lunches.', { image: undefined }),
-  p('v16', 'Celebration cake, 8 inch', 45000, '#FBE7D9', 'Celebration cake', 'Two-layer cake in your choice of flavour and colours.', { image: undefined }),
-  p('v16', 'Dessert box', 12000, '#EFE0EC', 'Dessert box', 'Cupcakes, brownies and parfait in a gift box.', { image: undefined }),
-  p('v17', 'Kilishi, 500 g', 12000, '#F1D3DA', 'Kilishi', 'Spiced dried beef, freshly packed.', { image: undefined }),
-  p('v17', 'Beef suya, 1 portion', 3000, '#FBE7D9', 'Beef suya', 'With onions, tomatoes and yaji.', { image: undefined }),
-  p('v18', 'Waist beads, set of 3', 7500, '#E4E1F2', 'Waist beads', 'Choose your colours; made to your size.', { image: undefined }),
-  p('v18', 'Bead bag', 15000, '#D9EBE6', 'Bead bag', 'Hand-beaded clutch bag.', { image: undefined }),
+  p('v15', 'Event tray, 50 guests', 30000, '#F6E3C8', 'Event tray', 'Puff-puff, samosa, spring rolls, chicken and gizzard for 50 guests.'),
+  p('v15', 'Office small chops box', 3500, '#F4ECC4', 'Small chops box', 'Single-portion box for office lunches.'),
+  p('v16', 'Banana bread loaf', 6000, '#FBE7D9', 'Banana bread', 'Moist banana bread, baked fresh every morning.'),
+  p('v16', 'Red velvet cupcakes, 6', 9000, '#EFE0EC', 'Cupcakes', 'Red velvet cupcakes with cream cheese frosting, boxed.'),
+  p('v17', 'Kilishi, 250 g', 6500, '#F1D3DA', 'Kilishi', 'Spiced dried beef, freshly packed.'),
+  p('v17', 'Beef suya, 1 portion', 3000, '#FBE7D9', 'Beef suya', 'With onions, tomatoes and yaji.'),
+  p('v18', 'Beaded waist set', 7500, '#E4E1F2', 'Waist beads', 'Set of three in your colours, made to your size.'),
+  p('v18', 'Bridal bead set', 38000, '#D9EBE6', 'Bridal beads', 'Necklace, bracelet and earrings for the big day.'),
 ]
 
 /**

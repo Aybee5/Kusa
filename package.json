@@ -19,7 +19,9 @@
     "db:seed": "tsx --env-file-if-exists=.env server/database/cli.ts seed",
     "db:reset": "tsx --env-file-if-exists=.env server/database/cli.ts reset",
     "db:studio": "drizzle-kit studio",
-    "test:api": "node tests/api.mjs"
+    "test:api": "node tests/api.mjs",
+    "photos:index": "node scripts/photo-index.mjs",
+    "photos:fetch": "node scripts/fetch-photos.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -49,6 +51,7 @@
     "@types/pg": "^8.23.1",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.11",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",

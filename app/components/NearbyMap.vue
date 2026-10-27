@@ -55,7 +55,12 @@ function fit() {
   if (!map) return
   const o = props.origin
   fitting = true
-  const points: Leaflet.LatLngTuple[] = props.vendors.map((v) => [v.lat, v.lng])
+  // With a search point and any distance, frame the closest businesses rather
+  // than every pin in the country.
+  const shown = o && !props.radiusKm
+    ? [...props.vendors].sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0)).slice(0, 8)
+    : props.vendors
+  const points: Leaflet.LatLngTuple[] = shown.map((v) => [v.lat, v.lng])
   if (o) points.push([o.lat, o.lng])
   if (o && props.radiusKm) map.fitBounds(L.latLng(o.lat, o.lng).toBounds(props.radiusKm * 2000), { padding: [16, 16] })
   else if (points.length > 1) map.fitBounds(L.latLngBounds(points), { padding: [32, 32], maxZoom: 15 })
