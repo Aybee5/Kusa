@@ -28,8 +28,11 @@ export function contentTypeFor(key: string): string {
   return ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
 }
 
-/** Product photos are public. */
-export const publicFileUrl = (key: string | null | undefined) => (key ? `/api/files/${key}` : undefined)
+/**
+ * Public URL for a stored photo. Keys starting with "/" are photos shipped
+ * with the site (the demo data's /images/…), served as they are.
+ */
+export const publicFileUrl = (key: string | null | undefined) => (!key ? undefined : key.startsWith('/') ? key : `/api/files/${key}`)
 
 /** Verification photos need a signed link that expires. */
 export function signedFileUrl(key: string | null | undefined, ttlSeconds = 15 * 60): string | undefined {

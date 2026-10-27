@@ -29,6 +29,8 @@ useSeoMeta({
   description: `${p0.description} ${formatNaira(p0.options?.[0]?.price ?? p0.price)} from ${v0.name}, ${v0.area}, ${v0.city}.`,
   ogTitle: `${p0.name} · ${formatNaira(p0.options?.[0]?.price ?? p0.price)}`,
   ogDescription: `From ${v0.name} on Kusa · ${v0.area}, ${v0.city}`,
+  // Uploaded photos may still be data URLs, which link previews can't use.
+  ogImage: p0.image?.startsWith('/') ? `${useRuntimeConfig().public.siteUrl}${p0.image}` : p0.image?.startsWith('http') ? p0.image : undefined,
 })
 </script>
 

@@ -60,14 +60,14 @@ export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = cons
       ...CONTACTS[v.id],
       area: v.area, city: v.city, landmark: v.landmark, lat: v.lat, lng: v.lng, status: v.status, suspensionReason: v.suspensionReason,
       opens: v.hours.opens, closes: v.hours.closes, closedDays: v.hours.closedDays, delivery: v.delivery, pickup: v.pickup,
-      about: v.about, tint: v.tint, coverTint: v.coverTint, idType: v.documents.idType || null,
+      about: v.about, tint: v.tint, coverTint: v.coverTint, coverImageKey: v.coverImage ?? null, idType: v.documents.idType || null,
       createdAt: asDate(v.joinedAt), submittedAt: v.submittedAt ? asDate(v.submittedAt) : asDate(v.joinedAt),
       verifiedAt: v.status === 'verified' ? asDate(v.joinedAt) : null,
     })))
 
     await tx.insert(productsT).values(products.map((p) => ({
       id: p.id, vendorId: p.vendorId, name: p.name, price: p.price, options: p.options ?? null, description: p.description,
-      tags: p.tags, tint: p.tint, photoLabel: p.photoLabel, available: p.available, createdAt: asDate(p.createdAt),
+      tags: p.tags, tint: p.tint, photoLabel: p.photoLabel, imageKey: p.image ?? null, available: p.available, createdAt: asDate(p.createdAt),
     })))
 
     // Written reviews

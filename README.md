@@ -140,6 +140,19 @@ The server is a standard Node app (`.output/server/index.mjs`) that needs a Post
 
 Migrations run automatically when the server starts. Leave `SEED_DEMO_DATA` unset in production.
 
+### Staging (kusa.yasr.app)
+
+Staging runs on the OCI server (`ssh oci`). Caddy (`/etc/caddy/Caddyfile`) serves `kusa.yasr.app` with a Let's Encrypt certificate and a `noindex` header and proxies to `127.0.0.1:3100`; Cloudflare proxies the domain to the server (SSL mode Full). The app now needs its database, so staging runs both with `docker-compose.staging.yml` (Postgres + PostGIS, then the web/API server on `127.0.0.1:3100`, loading the demo data and demo photos into an empty database). Settings go in `~/kusa/.env.staging` on the server (from `.env.example`; at least `AUTH_SECRET`). To redeploy:
+
+```bash
+rsync -az --delete --exclude node_modules --exclude .nuxt --exclude .output --exclude .git --exclude android --exclude ios --exclude .env.staging ./ oci:~/kusa/
+ssh oci 'cd ~/kusa && docker rm -f kusa-staging 2>/dev/null; docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build'
+```
+
+The first time, `docker rm -f kusa-staging` removes the old single container that served the earlier version, so the new stack can take port 3100.
+
+Demo photos are in `public/images` (credits in the `CREDITS.md` files there).
+
 ## The iOS and Android apps
 
 ```bash

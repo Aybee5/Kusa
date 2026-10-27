@@ -46,6 +46,7 @@ useSeoMeta({
   ogTitle: `${v.name} on Kusa`,
   ogDescription: `${categoryLabel(v.category)} in ${v.area}, ${v.city}. ★ ${v.rating.average.toFixed(1)} (${v.rating.count} ratings)`,
   ogType: 'website',
+  ogImage: v.coverImage?.startsWith('/') ? `${useRuntimeConfig().public.siteUrl}${v.coverImage}` : v.coverImage,
 })
 </script>
 

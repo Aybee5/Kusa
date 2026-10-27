@@ -6,7 +6,7 @@ defineProps<{ vendor: VendorWithMeta; sponsored?: boolean }>()
 <template>
   <NuxtLink :to="{ path: `/v/${vendor.slug}`, query: sponsored ? { from: 'ad' } : undefined }" class="card flex flex-col overflow-hidden text-ink transition-shadow hover:shadow-md">
     <div class="relative">
-      <PhotoBox :tint="vendor.coverTint" :src="vendor.coverImage" :label="categoryLabel(vendor.category)" class="h-28 lg:h-36" />
+      <PhotoBox :tint="vendor.coverTint" :src="vendor.coverImage" :alt="vendor.name" :label="categoryLabel(vendor.category)" class="h-28 lg:h-36" />
       <SponsoredTag v-if="sponsored" class="absolute left-2.5 top-2.5" />
     </div>
     <div class="flex flex-col gap-1 px-3.5 pb-3.5 pt-3">
