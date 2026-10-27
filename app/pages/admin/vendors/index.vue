@@ -29,7 +29,7 @@ const rows = computed(() => {
   return (vendors.value ?? [])
     .filter((v) => tab.value === 'all' || v.status === tab.value || (tab.value === 'pending' && v.status === 'changes'))
     .filter((v) => !category.value || v.category === category.value)
-    .filter((v) => !term || `${v.name} ${v.ownerName} ${v.phone}`.toLowerCase().includes(term))
+    .filter((v) => !term || `${v.name} ${v.ownerName} ${v.phone} ${v.ownerEmail ?? ''} ${v.instagram ?? ''}`.toLowerCase().includes(term))
     .sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0) || b.joinedAt.localeCompare(a.joinedAt))
 })
 

@@ -64,7 +64,7 @@ useSeoMeta({ title: () => `Rate ${vendor.value?.name} · Kusa`, robots: 'noindex
         </div>
 
         <div class="flex items-center gap-3">
-          <span class="flex size-[52px] shrink-0 items-center justify-center rounded-2xl font-display text-lg font-extrabold" :style="{ backgroundColor: vendor.tint }">{{ vendor.initials }}</span>
+          <VendorAvatar :vendor="vendor" class="size-[52px] rounded-2xl text-lg" />
           <div class="flex flex-col gap-0.5">
             <h1 class="font-display text-2xl font-extrabold leading-tight tracking-tight">{{ editing ? 'Edit your rating for' : 'Rate' }} {{ vendor.name }}</h1>
             <span class="text-[13px] text-muted">{{ categoryLabel(vendor.category) }} · {{ vendor.area }}, {{ vendor.city }}</span>

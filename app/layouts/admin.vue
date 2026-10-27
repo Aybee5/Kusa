@@ -42,7 +42,7 @@ const isActive = (to: string) => route.path.startsWith(to)
       <div class="mt-auto flex flex-col gap-3 border-t border-white/10 pt-4 text-xs text-[#C9D1CC]">
         <NuxtLink to="/" class="flex min-h-[42px] items-center gap-2.5 rounded-[10px] px-2.5 text-sm font-semibold text-[#C9D1CC] hover:bg-white/5"><AppIcon name="compass" :size="18" />Open Kusa</NuxtLink>
         <button type="button" class="flex min-h-[42px] cursor-pointer items-center gap-2.5 rounded-[10px] px-2.5 text-left text-sm font-semibold text-[#C9D1CC] hover:bg-white/5" @click="signOut('/')">
-          <AppIcon name="logout" :size="18" />Sign out<span v-if="user" class="truncate font-normal opacity-70">· {{ user.name || maskPhone(user.phone) }}</span>
+          <AppIcon name="logout" :size="18" />Sign out<span v-if="user" class="truncate font-normal opacity-70">· {{ user.name || accountLabel(user) }}</span>
         </button>
       </div>
     </aside>

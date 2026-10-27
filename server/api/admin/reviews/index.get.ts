@@ -1,3 +1,4 @@
+import { accountLabel } from '#shared/utils/catalog'
 import { desc, eq, inArray, sql } from 'drizzle-orm'
 import type { AdminReview } from '#shared/types/api'
 
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event): Promise<AdminReview[]> => {
   const countOf = new Map(counts.map((c) => [c.userId, c.n]))
   return rows.map(({ r, author, vendorName }) => ({
     ...toReview(r),
-    authorName: author.name || author.phone,
+    authorName: author.name || accountLabel(author),
     vendorName,
     authorReviewCount: countOf.get(author.id) ?? 1,
     authorJoinedAt: author.createdAt.toISOString().slice(0, 10),

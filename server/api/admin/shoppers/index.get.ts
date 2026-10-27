@@ -22,6 +22,7 @@ export default defineEventHandler(async (event): Promise<AdminShopper[]> => {
     id: u.id,
     name: u.name || 'No name yet',
     phone: u.phone,
+    email: u.email,
     area: u.area || '–',
     joinedAt: u.createdAt.toISOString().slice(0, 10),
     lastActiveAt: u.lastActiveAt.toISOString().slice(0, 10),

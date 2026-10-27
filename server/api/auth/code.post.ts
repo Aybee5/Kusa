@@ -1,27 +1,28 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import type { CodeSent } from '#shared/types/api'
-import { normalizeNgPhone } from '#shared/utils/catalog'
 
 const RESEND_SECONDS = 60
-const Body = z.object({ phone: z.string().max(20) })
+const Body = z.union([z.object({ email: z.string().max(254) }), z.object({ phone: z.string().max(20) })])
 
-/** POST /api/auth/code: text a 6-digit sign-in code (one per minute per number). */
+/**
+ * POST /api/auth/code: send a 6-digit sign-in code by email ({ email }) or SMS
+ * ({ phone }), whichever SIGNIN_METHODS allows. One code per minute per address.
+ */
 export default defineEventHandler(async (event): Promise<CodeSent> => {
-  const phone = normalizeNgPhone((await readValidatedBody(event, Body.parse)).phone)
-  if (!phone) throw createError({ statusCode: 400, message: 'Enter a Nigerian mobile number, e.g. 0803 000 0000' })
+  const target = signInTarget(await readValidatedBody(event, Body.parse))
 
   const db = useDb()
   const { otpCodes } = schema
-  const [existing] = await db.select().from(otpCodes).where(eq(otpCodes.phone, phone)).limit(1)
+  const [existing] = await db.select().from(otpCodes).where(eq(otpCodes.target, target.key)).limit(1)
   const wait = existing ? RESEND_SECONDS - Math.floor((Date.now() - existing.sentAt.getTime()) / 1000) : 0
   if (wait > 0) throw createError({ statusCode: 429, message: `Please wait ${wait} seconds before asking for another code` })
 
-  const code = newOtpCode()
-  const row = { phone, codeHash: hashOtp(phone, code), expiresAt: new Date(Date.now() + 10 * 60_000), attempts: 0, sentAt: new Date() }
-  await db.insert(otpCodes).values(row).onConflictDoUpdate({ target: otpCodes.phone, set: row })
-  await sendSignInCode(phone, code)
+  const code = newOtpCode(target.method)
+  const row = { target: target.key, codeHash: hashOtp(target.key, code), expiresAt: new Date(Date.now() + 10 * 60_000), attempts: 0, sentAt: new Date() }
+  await db.insert(otpCodes).values(row).onConflictDoUpdate({ target: otpCodes.target, set: row })
+  if (target.method === 'email') await sendSignInEmail(target.value, code)
+  else await sendSignInCode(target.value, code)
 
-  const { smsProvider } = serverConfig()
-  return { sent: true, retryAfter: RESEND_SECONDS, ...(smsProvider === 'console' ? { devCode: code } : {}) }
+  return { sent: true, retryAfter: RESEND_SECONDS, ...(codesAreLogged(target.method) ? { devCode: code } : {}) }
 })

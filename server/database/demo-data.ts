@@ -12,7 +12,9 @@ const at = (dLatKm: number, dLngKm: number) => ({
 const hours = (opens: string, closes: string, closedDays: number[] = []) => ({ opens, closes, closedDays })
 const docs = (idType = 'NIN slip', hasSelfie = true, hasBusinessProof = true) => ({ idType, hasSelfie, hasBusinessProof })
 
-export const vendors: Vendor[] = [
+type DemoVendor = Omit<Vendor, 'instagram' | 'showPhone' | 'primaryContact'> & Partial<Pick<Vendor, 'instagram' | 'showPhone' | 'primaryContact'>>
+
+export const vendors: DemoVendor[] = [
   {
     id: 'v1', slug: 'mama-hadiza-small-chops', name: 'Mama Hadiza Small Chops', ownerName: 'Hadiza Umar',
     phone: '+2348030004417', whatsapp: '2348030004417', category: 'small-chops', area: 'Tarauni', city: 'Kano',
@@ -168,7 +170,7 @@ export const seedRatings: Record<string, [number, number, number, number, number
   v14: [28, 4, 1, 0, 0],
 }
 
-export const shoppers: Shopper[] = [
+export const shoppers: Omit<Shopper, 'email'>[] = [
   { id: 's1', name: 'Aisha Bello', phone: '+2348130000954', area: 'Nassarawa GRA', joinedAt: '2026-07-11', lastActiveAt: '2026-10-26', status: 'active', initials: 'AB', tint: '#E3F1EA' },
   { id: 's2', name: 'Umar Sani', phone: '+2348020007719', area: 'Tarauni', joinedAt: '2026-09-04', lastActiveAt: '2026-10-25', status: 'active', initials: 'US', tint: '#E4E1F2' },
   { id: 's3', name: 'Kabiru Danladi', phone: '+2347010003308', area: 'Unknown', joinedAt: '2026-10-26', lastActiveAt: '2026-10-26', status: 'flagged', initials: 'KD', tint: '#FBE7D9' },
@@ -219,6 +221,7 @@ function buildStats(vendorId: string, base: number, today: string): VendorStats 
       views,
       visitors,
       whatsapp: Math.round(views * (0.07 + rnd() * 0.04)),
+      instagram: 0,
       calls: Math.round(views * (0.02 + rnd() * 0.02)),
       directions: Math.round(views * (0.015 + rnd() * 0.02)),
     })

@@ -3,9 +3,12 @@ import type {
 } from '#shared/types'
 import type {
   AdminPromotionInput, AdminReview, AdminShopper, AdminVendor, Area, AuthResult, CodeSent, LatLng, NewProductInput, NewPromotionInput,
-  NewVendorInput, ProductWithVendor, Promoted, Promotion, PromotionPlans, PublicReview, TrafficEvent, TrafficSourceKey, UploadKind,
-  UploadResult, VerificationInput,
+  NewVendorInput, ProductUpdate, ProductWithVendor, Promoted, Promotion, PromotionPlans, PublicReview, SignInOptions, TrafficEvent,
+  TrafficSourceKey, UploadKind, UploadResult, VendorUpdate, VerificationInput,
 } from '#shared/types/api'
+
+/** Who a sign-in code goes to. */
+export type SignInTo = { email: string } | { phone: string }
 
 export type * from '#shared/types/api'
 
@@ -30,8 +33,9 @@ export interface KusaApi {
   recordPromotionEvent(promotionId: string, event: 'impression' | 'click'): Promise<void>
 
   // Auth
-  requestCode(phone: string): Promise<CodeSent>
-  verifyCode(phone: string, code: string, name?: string): Promise<AuthResult>
+  signInOptions(): Promise<SignInOptions>
+  requestCode(to: SignInTo): Promise<CodeSent>
+  verifyCode(to: SignInTo, code: string, name?: string): Promise<AuthResult>
   me(): Promise<SessionUser>
   signOut(): Promise<void>
 
@@ -41,11 +45,14 @@ export interface KusaApi {
   // Vendor (the signed-in vendor's own business)
   getMyVendor(): Promise<Vendor | null>
   registerVendor(input: NewVendorInput): Promise<{ vendor: Vendor; user: SessionUser }>
+  updateMyVendor(changes: VendorUpdate): Promise<Vendor>
   submitVerification(input: VerificationInput): Promise<Vendor>
   getVendorStats(): Promise<VendorStats | null>
   vendorProducts(): Promise<Product[]>
   setProductAvailable(productId: string, available: boolean): Promise<void>
   createProduct(input: NewProductInput): Promise<Product>
+  updateProduct(productId: string, changes: ProductUpdate): Promise<Product>
+  deleteProduct(productId: string): Promise<void>
   promotionPlans(): Promise<PromotionPlans>
   myPromotions(): Promise<Promotion[]>
   requestPromotion(input: NewPromotionInput): Promise<Promotion>

@@ -18,6 +18,13 @@ async function req(method, path, { token, body, query } = {}) {
   return { status: res.status, data, headers: res.headers }
 }
 const todayLagos = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+async function signInEmail(email, name) {
+  const c = await req('POST', '/auth/code', { body: { email } })
+  if (c.status !== 200) throw new Error(`code ${email}: ${c.status} ${JSON.stringify(c.data)}`)
+  const v = await req('POST', '/auth/verify', { body: { email, code: c.data.devCode, name } })
+  if (v.status !== 200) throw new Error(`verify ${email}: ${v.status} ${JSON.stringify(v.data)}`)
+  return v.data
+}
 async function signIn(phone, name) {
   const c = await req('POST', '/auth/code', { body: { phone } })
   if (c.status !== 200) throw new Error(`code ${phone}: ${c.status} ${JSON.stringify(c.data)}`)
@@ -29,8 +36,25 @@ async function signIn(phone, name) {
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 try {
+  let r
+  const methods = (await req('GET', '/auth/options')).data?.methods ?? []
+  if (process.env.EXPECT_METHODS) ok(`sign-in methods are ${process.env.EXPECT_METHODS}`, methods.join(',') === process.env.EXPECT_METHODS, methods.join(','))
+  if (!methods.includes('phone')) {
+    // Email-only deployment: phone codes are refused; everyone signs in by email.
+    ok('phone sign-in refused when off', (await req('POST', '/auth/code', { body: { phone: '08061234567' } })).status === 400)
+    const v = await signInEmail('mama-hadiza-small-chops@demo.kusa.ng')
+    ok('demo vendor signs in by email', v.user.role === 'vendor' && v.user.vendorId === 'v1' && v.user.email === 'mama-hadiza-small-chops@demo.kusa.ng')
+    const a = await signInEmail('admin@demo.kusa.ng')
+    ok('demo admin signs in by email', a.user.role === 'admin')
+    const n = await signInEmail('New.Seller@Example.com', 'New Seller')
+    ok('new account by email, stored lower-case', n.user.role === 'shopper' && n.user.email === 'new.seller@example.com' && n.user.phone === null)
+    r = await req('POST', '/me/vendor', { token: n.token, body: { name: 'Seller Snacks', category: 'snacks', phone: '08021112222', whatsapp: null, instagram: 'sellersnacks', showPhone: true, primaryContact: 'instagram', area: 'Sharada', city: 'Kano', landmark: '', lat: 11.98, lng: 8.5, delivery: true, pickup: true } })
+    ok('email account registers a business with a phone number', r.status === 200 && r.data.vendor.phone === '+2348021112222' && r.data.vendor.instagram === 'sellersnacks')
+    throw new Error('done')
+  }
+
   // Public
-  let r = await req('GET', '/vendors', { query: { radiusKm: 3, sort: 'top-rated', lat: 11.9965, lng: 8.531 } })
+  r = await req('GET', '/vendors', { query: { radiusKm: 3, sort: 'top-rated', lat: 11.9965, lng: 8.531 } })
   ok('search within 3 km', r.status === 200 && r.data.length > 0 && r.data.every((v) => v.distanceKm <= 3), `${r.data.length} results`)
   ok('top rated order', r.data.every((v, i, a) => i === 0 || a[i - 1].rating.average >= v.rating.average))
   r = await req('GET', '/vendors', { query: { minRating: 4.5 } })
@@ -81,6 +105,16 @@ try {
   ok('me', (await req('GET', '/auth/me', { token: shopper.token })).data?.name === 'Test Shopper')
   ok('no token 401', (await req('GET', '/auth/me')).status === 401)
   ok('shopper cannot use admin', (await req('GET', '/admin/vendors', { token: shopper.token })).status === 403)
+  ok('bad email rejected', (await req('POST', '/auth/code', { body: { email: 'not-an-email' } })).status === 400)
+  r = await req('POST', '/auth/code', { body: { email: 'Halima@Example.com' } })
+  ok('email code sent', r.status === 200 && r.data.devCode)
+  ok('email code is per address', (await req('POST', '/auth/verify', { body: { email: 'other@example.com', code: '123456' } })).status === 400)
+  r = await req('POST', '/auth/verify', { body: { email: 'halima@example.com', code: '123456', name: 'Halima' } })
+  ok('new shopper signs in by email', r.status === 200 && r.data.user.email === 'halima@example.com' && r.data.user.phone === null)
+  const emailUser = r.data
+  r = await signInEmail('HALIMA@example.com')
+  ok('same account next time', r.user.id === emailUser.user.id)
+  ok('phone and email accounts are separate', emailUser.user.id !== shopper.user.id)
 
   // Ratings (the stored totals must follow every change)
   const ratingOf = async (slug) => (await req('GET', `/vendors/${slug}`)).data.rating
@@ -122,10 +156,17 @@ try {
 
   // New vendor: register, upload, verify
   const newbie = await signIn('07031234567', 'Rukayya Musa')
-  r = await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Rukayya Cakes', category: 'cakes', whatsapp: '07031234567', area: 'Zoo Road', city: 'Kano', landmark: 'Near the roundabout', lat: 12.0, lng: 8.53, delivery: true, pickup: false } })
+  r = await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Rukayya Cakes', category: 'cakes', phone: '07031234567', whatsapp: '07031234567', instagram: null, showPhone: true, primaryContact: 'whatsapp', area: 'Zoo Road', city: 'Kano', landmark: 'Near the roundabout', lat: 12.0, lng: 8.53, delivery: true, pickup: false } })
   ok('register business', r.status === 200 && r.data.user.role === 'vendor' && r.data.vendor.status === 'pending', r.data?.vendor?.slug)
   const newVendorId = r.data.vendor.id
-  ok('second business refused', (await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Again', category: 'cakes', whatsapp: '07031234567', area: 'Zoo Road', city: 'Kano', landmark: '', lat: 12, lng: 8.5, delivery: true, pickup: true } })).status === 409)
+  const reg = { name: 'X Shop', category: 'cakes', phone: '07031234568', whatsapp: null, instagram: null, showPhone: true, primaryContact: 'phone', area: 'Zoo Road', city: 'Kano', landmark: '', lat: 12, lng: 8.5, delivery: true, pickup: true }
+  const other = await signIn('07031234568', 'Other Seller')
+  ok('main button must be switched on', (await req('POST', '/me/vendor', { token: other.token, body: { ...reg, primaryContact: 'whatsapp' } })).status === 400)
+  ok('at least one way to reach them', (await req('POST', '/me/vendor', { token: other.token, body: { ...reg, showPhone: false } })).status === 400)
+  ok('bad Instagram username rejected', (await req('POST', '/me/vendor', { token: other.token, body: { ...reg, instagram: 'not a handle!' } })).status === 400)
+  r = await req('POST', '/me/vendor', { token: other.token, body: { ...reg, instagram: 'https://instagram.com/X.Shop.Kano/', primaryContact: 'instagram', showPhone: false } })
+  ok('Instagram-only business', r.status === 200 && r.data.vendor.instagram === 'x.shop.kano' && r.data.vendor.whatsapp === null && r.data.vendor.primaryContact === 'instagram' && !r.data.vendor.showPhone)
+  ok('second business refused', (await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Again', category: 'cakes', phone: '07031234567', whatsapp: null, instagram: null, showPhone: true, primaryContact: 'phone', area: 'Zoo Road', city: 'Kano', landmark: '', lat: 12, lng: 8.5, delivery: true, pickup: true } })).status === 409)
   ok('non-image upload rejected', (await req('POST', '/uploads', { token: newbie.token, body: { kind: 'verification', dataUrl: 'data:image/png;base64,aGVsbG8=' } })).status === 400)
   const id = (await req('POST', '/uploads', { token: newbie.token, body: { kind: 'verification', dataUrl: PNG } })).data
   const selfie = (await req('POST', '/uploads', { token: newbie.token, body: { kind: 'verification', dataUrl: PNG } })).data
@@ -170,6 +211,42 @@ try {
   ok('reinstated shopper’s ratings count again', (await ratingOf('crunch-and-co')).count === crunchBase.count + 1)
   r = await req('GET', '/admin/vendors', { token: admin.token })
   ok('admin list shows stored rating', r.data.find((v) => v.slug === 'crunch-and-co')?.ratingCount === crunchBase.count + 1)
+
+  // Shop editing
+  ok('closing must be after opening', (await req('PATCH', '/me/vendor', { token: owner.token, body: { hours: { opens: '18:00', closes: '09:00', closedDays: [] } } })).status === 400)
+  r = await req('PATCH', '/me/vendor', { token: owner.token, body: { about: 'Fresh small chops daily.', hours: { opens: '10:30', closes: '22:00', closedDays: [5, 0, 5] }, landmark: 'Opposite the mosque' } })
+  ok('vendor edits about, hours and landmark', r.status === 200 && r.data.about === 'Fresh small chops daily.' && r.data.hours.opens === '10:30' && r.data.hours.closedDays.join() === '0,5' && r.data.landmark === 'Opposite the mosque',
+    `${r.status} ${r.data?.message ?? ''}`)
+  r = await req('PATCH', '/me/vendor', { token: owner.token, body: { instagram: '@biteboxkano', primaryContact: 'instagram' } })
+  ok('vendor adds Instagram as the main button', r.data?.instagram === 'biteboxkano' && r.data.primaryContact === 'instagram' && r.data.whatsapp === '2348090005521')
+  ok('can’t turn off the main button', (await req('PATCH', '/me/vendor', { token: owner.token, body: { instagram: null } })).status === 400)
+  r = await req('GET', '/vendors/bite-box-kano')
+  ok('shoppers see the new contact buttons', r.data.instagram === 'biteboxkano' && r.data.primaryContact === 'instagram' && r.data.about === 'Fresh small chops daily.')
+  const shopImg = (await req('POST', '/uploads', { token: owner.token, body: { kind: 'shop', dataUrl: PNG } })).data
+  ok('shop photo upload is public', shopImg.key?.startsWith('shop/') && !!shopImg.url)
+  ok('can’t use someone else’s shop photo', (await req('PATCH', '/me/vendor', { token: owner.token, body: { coverImageKey: (await req('POST', '/uploads', { token: other.token, body: { kind: 'shop', dataUrl: PNG } })).data.key } })).status === 400)
+  r = await req('PATCH', '/me/vendor', { token: owner.token, body: { coverImageKey: shopImg.key, logoImageKey: shopImg.key } })
+  ok('vendor sets cover photo and logo', !!r.data?.coverImage && !!r.data.logo)
+  r = await req('PATCH', '/me/vendor', { token: owner.token, body: { logoImageKey: null } })
+  ok('vendor removes the logo', !r.data?.logo && !!r.data.coverImage)
+  ok('shoppers can’t upload shop photos', (await req('POST', '/uploads', { token: emailUser.token, body: { kind: 'shop', dataUrl: PNG } })).status === 403)
+  ok('Instagram tap counted', (await req('POST', '/vendors/bite-box-kano/events', { body: { event: 'instagram' } })).status === 204
+    && (await req('GET', '/me/vendor/stats', { token: owner.token })).data.daily.at(-1).instagram >= 1)
+
+  // Products
+  r = await req('POST', '/me/products', { token: owner.token, body: { name: 'Meat pie box', price: 1000, description: 'Fresh', options: [{ label: '6 pcs', price: 4500 }, { label: '12 pcs', price: 8500 }] } })
+  ok('product with options; price is the cheapest', r.status === 201 && r.data.options.length === 2 && r.data.price === 4500)
+  const pieId = r.data.id
+  r = await req('PATCH', `/me/products/${pieId}`, { token: owner.token, body: { name: 'Meat pie box (fresh)', options: [], price: 5000, description: 'Baked every morning' } })
+  ok('edit product: name, price, drop options', r.data?.name === 'Meat pie box (fresh)' && r.data.price === 5000 && !r.data.options && r.data.description === 'Baked every morning')
+  ok('can’t edit someone else’s product', (await req('PATCH', '/me/products/p1', { token: owner.token, body: { name: 'Mine now' } })).status === 404)
+  ok('delete product', (await req('DELETE', `/me/products/${pieId}`, { token: owner.token })).status === 204
+    && !(await req('GET', '/vendors/v7/products')).data.some((p) => p.id === pieId))
+  ok('can’t delete someone else’s product', (await req('DELETE', '/me/products/p1', { token: owner.token })).status === 404)
+  const crunch = await signIn('08160001190')
+  ok('can’t delete a product in a running promotion', (await req('DELETE', `/me/products/${(await req('GET', '/admin/promotions', { token: admin.token })).data.find((x) => x.id === 'promo5').productId}`, { token: crunch.token })).status === 409)
+  r = await req('GET', '/vendors/henna-by-rahma')
+  ok('demo: Instagram-first business', r.data.primaryContact === 'instagram' && r.data.whatsapp === null && r.data.instagram === 'hennabyrahma')
 
   // Promotions
   const KANO = { lat: 11.9965, lng: 8.531 }
@@ -256,7 +333,7 @@ try {
   const bad = await fetch(B + '/vendors', { headers: { origin: 'https://evil.example' } })
   ok('CORS blocks other sites', !bad.headers.get('access-control-allow-origin'))
 } catch (e) {
-  results.push('ERROR ' + e.stack)
+  if (e.message !== 'done') results.push('ERROR ' + e.stack)
 }
 console.log(results.join('\n'))
 console.log(`\n${results.filter((x) => x.startsWith('PASS')).length}/${results.length} passed`)

@@ -120,6 +120,29 @@ export function normalizeNgPhone(input: string): string | null {
   return /^[789][01]\d{8}$/.test(d) ? `+234${d}` : null
 }
 
+/** Lower-cased email if it looks valid, else null. */
+export function normalizeEmail(input: string): string | null {
+  const e = input.trim().toLowerCase()
+  return e.length <= 254 && /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(e) ? e : null
+}
+
+/** "ai•••@gmail.com" */
+export function maskEmail(email: string): string {
+  const [name = '', domain = ''] = email.split('@')
+  return `${name.slice(0, 2)}${'•'.repeat(Math.min(5, Math.max(1, name.length - 2)))}@${domain}`
+}
+
+/** How to show an account: email or phone, partly hidden. */
+export function accountLabel(u: { email?: string | null; phone?: string | null }): string {
+  return u.email ? maskEmail(u.email) : u.phone ? maskPhone(u.phone) : ''
+}
+
+/** Instagram username from "@name", "name" or an instagram.com link; null if it isn't one. */
+export function normalizeInstagram(input: string): string | null {
+  const raw = input.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?#].*$/, '')
+  return /^[A-Za-z0-9._]{1,30}$/.test(raw) ? raw.toLowerCase() : null
+}
+
 export function initialsOf(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || 'K'
 }

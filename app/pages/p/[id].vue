@@ -4,7 +4,7 @@ definePageMeta({ hideBottomNav: true })
 const route = useRoute()
 const api = useApi()
 const { origin } = useLocation()
-const { whatsappUrl, callUrl, track, share } = useContact()
+const { share } = useContact()
 const id = String(route.params.id)
 
 const { data } = await useAsyncData(`product-${id}`, () => api.getProduct(id, origin.value), { watch: [origin] })
@@ -35,8 +35,8 @@ useSeoMeta({
 <template>
   <div v-if="data" class="mx-auto max-w-[1240px] pb-[110px] lg:grid lg:grid-cols-2 lg:gap-10 lg:px-6 lg:pb-16 lg:pt-8">
     <div class="relative">
-      <PhotoBox :tint="data.product.tint" class="h-[318px] lg:h-[520px] lg:rounded-3xl" />
-      <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white/85 px-2.5 py-1 text-xs text-ink-2">
+      <PhotoBox :tint="data.product.tint" :src="data.product.image" :alt="data.product.name" class="h-[318px] lg:h-[520px] lg:rounded-3xl" />
+      <span v-if="!data.product.image" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white/85 px-2.5 py-1 text-xs text-ink-2">
         Product photo · {{ data.product.photoLabel }}
       </span>
       <div class="pt-safe absolute inset-x-3 top-2.5 flex justify-between lg:hidden">
@@ -51,7 +51,7 @@ useSeoMeta({
 
     <div class="flex flex-col gap-3.5 px-5 pt-4 lg:px-0 lg:pt-2">
       <NuxtLink :to="`/v/${data.vendor.slug}`" class="flex min-h-8 items-center gap-2 text-ink">
-        <span class="flex size-7 items-center justify-center rounded-[9px] font-display text-[11px] font-extrabold" :style="{ backgroundColor: data.vendor.tint }">{{ data.vendor.initials }}</span>
+        <VendorAvatar :vendor="data.vendor" class="size-7 rounded-[9px] text-[11px]" />
         <span class="text-sm font-semibold">{{ data.vendor.name }}</span>
         <VerifiedBadge />
         <span class="ml-auto flex items-center gap-2 text-[13px]"><RatingInline :rating="data.vendor.rating" /><span v-if="data.vendor.distanceKm != null" class="text-muted">{{ formatKm(data.vendor.distanceKm) }}</span></span>
@@ -90,24 +90,15 @@ useSeoMeta({
       <p class="text-sm leading-relaxed text-ink-2 lg:text-base">{{ data.product.description }}</p>
 
       <!-- Laptop actions -->
-      <div class="mt-2 hidden gap-2.5 lg:flex">
-        <a :href="whatsappUrl(data.vendor, orderName)" target="_blank" rel="noopener" class="btn-primary h-[54px] flex-1 text-base" @click="track(data.vendor, 'whatsapp')"><AppIcon name="chat" />Order on WhatsApp</a>
-        <a :href="callUrl(data.vendor)" class="btn-outline h-[54px] px-6" @click="track(data.vendor, 'call')"><AppIcon name="phone" />Call</a>
+      <ContactButtons :vendor="data.vendor" :product-name="orderName" variant="product" class="mt-2 hidden lg:flex">
         <button type="button" class="btn-outline h-[54px] px-5" aria-label="Share" @click="share(data.product.name, `/p/${data.product.id}`)"><AppIcon name="share" /></button>
-      </div>
+      </ContactButtons>
       <p class="hidden text-[13px] text-muted lg:block">You pay and arrange delivery with the seller directly.</p>
     </div>
 
     <!-- Phone action bar -->
     <div class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface lg:hidden">
-      <div class="flex gap-2.5 px-5 pb-3 pt-3">
-        <a :href="callUrl(data.vendor)" aria-label="Call vendor" class="flex size-[54px] shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-ink text-ink" @click="track(data.vendor, 'call')">
-          <AppIcon name="phone" :size="22" />
-        </a>
-        <a :href="whatsappUrl(data.vendor, orderName)" target="_blank" rel="noopener" class="btn-primary h-[54px] flex-1 text-base" @click="track(data.vendor, 'whatsapp')">
-          <AppIcon name="chat" />Order on WhatsApp
-        </a>
-      </div>
+      <ContactButtons :vendor="data.vendor" :product-name="orderName" variant="bar" class="px-5 pb-3 pt-3" />
     </div>
   </div>
 </template>

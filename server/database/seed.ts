@@ -11,8 +11,17 @@ const {
   promotions: promotionsT, promotionDailyStats,
 } = schema
 
-/** Demo admin. Sign in with this number; in development the code is shown on screen. */
+/** Demo admin. Sign in with this number or email; in development the code is shown on screen. */
 export const DEMO_ADMIN_PHONE = '+2348000000001'
+export const DEMO_ADMIN_EMAIL = 'admin@demo.kusa.ng'
+const demoEmail = (local: string) => `${local.toLowerCase().replace(/[^a-z0-9.-]+/g, '')}@demo.kusa.ng`
+
+// Some demo businesses take messages on Instagram.
+const CONTACTS: Record<string, { instagram?: string; whatsapp?: null; primaryContact?: 'instagram' | 'phone' }> = {
+  v9: { instagram: 'kanokicks' },
+  v11: { instagram: 'amaljewels.kano', primaryContact: 'instagram' },
+  v14: { instagram: 'hennabyrahma', whatsapp: null, primaryContact: 'instagram' },
+}
 
 const RATER_NAMES = [
   'Abubakar Sani', 'Amina Bello', 'Chinedu Okafor', 'Fatima Yusuf', 'Halima Aliyu', 'Ibrahim Musa', 'Jamila Ahmed', 'Kabir Lawal',
@@ -33,21 +42,22 @@ export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = cons
 
   await db.transaction(async (tx) => {
     // Admin, shoppers, raters and vendor owners
-    await tx.insert(users).values({ id: 'admin', phone: DEMO_ADMIN_PHONE, name: 'Kusa Admin', role: 'admin' })
+    await tx.insert(users).values({ id: 'admin', phone: DEMO_ADMIN_PHONE, email: DEMO_ADMIN_EMAIL, name: 'Kusa Admin', role: 'admin' })
     await tx.insert(users).values(shoppers.map((s) => ({
-      id: s.id, phone: s.phone, name: s.name, role: 'shopper' as const, status: s.status, suspensionReason: s.suspensionReason,
+      id: s.id, phone: s.phone, email: demoEmail(s.name.split(' ')[0]!), name: s.name, role: 'shopper' as const, status: s.status, suspensionReason: s.suspensionReason,
       area: s.area, tint: s.tint, createdAt: asDate(s.joinedAt), lastActiveAt: asDate(s.lastActiveAt),
     })))
     await tx.insert(users).values(RATER_NAMES.map((name, i) => ({
-      id: `rater${i + 1}`, phone: `+2349${String(10000000 + i * 7919).padStart(9, '0')}`.slice(0, 14), name, role: 'shopper' as const,
+      id: `rater${i + 1}`, email: demoEmail(`rater${i + 1}`), phone: `+2349${String(10000000 + i * 7919).padStart(9, '0')}`.slice(0, 14), name, role: 'shopper' as const,
       area: 'Kano', tint: TINTS[i % TINTS.length]!, createdAt: daysAgo(40 + i * 2), lastActiveAt: daysAgo(i % 9),
     })))
     await tx.insert(users).values(vendors.map((v) => ({
-      id: `owner-${v.id}`, phone: v.phone, name: v.ownerName, role: 'vendor' as const, area: v.area, createdAt: asDate(v.joinedAt),
+      id: `owner-${v.id}`, phone: v.phone, email: demoEmail(v.slug), name: v.ownerName, role: 'vendor' as const, area: v.area, createdAt: asDate(v.joinedAt),
     })))
 
     await tx.insert(vendorsT).values(vendors.map((v) => ({
       id: v.id, ownerId: `owner-${v.id}`, slug: v.slug, name: v.name, category: v.category, phone: v.phone, whatsapp: v.whatsapp,
+      ...CONTACTS[v.id],
       area: v.area, city: v.city, landmark: v.landmark, lat: v.lat, lng: v.lng, status: v.status, suspensionReason: v.suspensionReason,
       opens: v.hours.opens, closes: v.hours.closes, closedDays: v.hours.closedDays, delivery: v.delivery, pickup: v.pickup,
       about: v.about, tint: v.tint, coverTint: v.coverTint, idType: v.documents.idType || null,
@@ -85,7 +95,7 @@ export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = cons
     // Traffic for the last 60 days
     const stats = buildAllStats(todayLagos()).filter((s) => vendors.find((v) => v.id === s.vendorId)?.status !== 'pending')
     for (const s of stats) {
-      await tx.insert(vendorDailyStats).values(s.daily.map((d) => ({ vendorId: s.vendorId, day: d.date, ...pick(d) })))
+      await tx.insert(vendorDailyStats).values(s.daily.map((d) => ({ vendorId: s.vendorId, day: d.date, ...pick(d, CONTACTS[s.vendorId]) })))
       await tx.insert(vendorSourceStats).values(s.daily.flatMap((d) => [
         { vendorId: s.vendorId, day: d.date, source: 'search', views: Math.round(d.views * 0.46) },
         { vendorId: s.vendorId, day: d.date, source: 'map', views: Math.round(d.views * 0.24) },
@@ -130,6 +140,8 @@ export async function seedDemoData(db: NodePgDatabase<typeof schema>, log = cons
   return true
 }
 
-function pick(d: { views: number; visitors: number; whatsapp: number; calls: number; directions: number }) {
-  return { views: d.views, visitors: d.visitors, whatsapp: d.whatsapp, calls: d.calls, directions: d.directions }
+function pick(d: { views: number; visitors: number; whatsapp: number; calls: number; directions: number }, contacts?: (typeof CONTACTS)[string]) {
+  // Businesses on Instagram get some of their message taps there instead.
+  const instagram = contacts?.instagram ? Math.round(d.whatsapp * (contacts.whatsapp === null ? 1 : 0.5)) : 0
+  return { views: d.views, visitors: d.visitors, whatsapp: d.whatsapp - instagram, instagram, calls: d.calls, directions: d.directions }
 }

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { todayLagos } from '#shared/utils/catalog'
 
 const Body = z.object({
-  event: z.enum(['view', 'whatsapp', 'call', 'directions']),
+  event: z.enum(['view', 'whatsapp', 'instagram', 'call', 'directions']),
   firstVisitToday: z.boolean().optional(),
   productId: z.string().max(64).optional(),
   source: z.enum(['search', 'map', 'share', 'external', 'direct', 'ad']).optional(),
@@ -11,7 +11,7 @@ const Body = z.object({
 
 /**
  * POST /api/vendors/:slugOrId/events: counts a profile view, a unique visitor
- * (first view from a device that day), or a WhatsApp / call / directions tap.
+ * (first view from a device that day), or a WhatsApp / Instagram / call / directions tap.
  */
 export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, Body.parse)
@@ -25,6 +25,7 @@ export default defineEventHandler(async (event) => {
     views: body.event === 'view' ? 1 : 0,
     visitors: body.event === 'view' && body.firstVisitToday ? 1 : 0,
     whatsapp: body.event === 'whatsapp' ? 1 : 0,
+    instagram: body.event === 'instagram' ? 1 : 0,
     calls: body.event === 'call' ? 1 : 0,
     directions: body.event === 'directions' ? 1 : 0,
   }
@@ -34,6 +35,7 @@ export default defineEventHandler(async (event) => {
       views: sql`${s.views} + ${inc.views}`,
       visitors: sql`${s.visitors} + ${inc.visitors}`,
       whatsapp: sql`${s.whatsapp} + ${inc.whatsapp}`,
+      instagram: sql`${s.instagram} + ${inc.instagram}`,
       calls: sql`${s.calls} + ${inc.calls}`,
       directions: sql`${s.directions} + ${inc.directions}`,
     },

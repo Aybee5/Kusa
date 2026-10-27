@@ -7,7 +7,7 @@ const api = useApi()
 const { origin } = useLocation()
 const saved = useSaved()
 const toast = useToast()
-const { whatsappUrl, callUrl, directionsUrl, track, share } = useContact()
+const { share } = useContact()
 const slug = computed(() => String(route.params.slug))
 
 const { data: vendor } = await useAsyncData(`vendor-${slug.value}`, () => api.getVendor(slug.value, origin.value), { watch: [origin] })
@@ -53,7 +53,7 @@ useSeoMeta({
   <div v-if="vendor" class="mx-auto max-w-[1240px] pb-10 lg:px-6 lg:pt-6">
     <!-- Cover -->
     <div class="relative">
-      <PhotoBox :tint="vendor.coverTint" class="h-[188px] lg:h-64 lg:rounded-3xl" />
+      <PhotoBox :tint="vendor.coverTint" :src="vendor.coverImage" :alt="`${vendor.name} cover photo`" class="h-[188px] lg:h-64 lg:rounded-3xl" />
       <div class="pt-safe absolute inset-x-3 top-2.5 flex justify-between lg:inset-x-4 lg:top-4">
         <button type="button" aria-label="Back" class="flex size-11 cursor-pointer items-center justify-center rounded-full bg-surface shadow" @click="$router.back()">
           <AppIcon name="chevron-left" :size="22" />
@@ -81,9 +81,7 @@ useSeoMeta({
     <div class="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8">
       <!-- Info -->
       <aside class="relative -mt-[38px] flex flex-col gap-3.5 px-5 lg:sticky lg:top-6 lg:mt-[-48px] lg:self-start lg:px-0">
-        <div class="flex size-[76px] items-center justify-center rounded-[22px] border-4 border-paper font-display text-[26px] font-extrabold" :style="{ backgroundColor: vendor.tint }">
-          {{ vendor.initials }}
-        </div>
+        <VendorAvatar :vendor="vendor" class="size-[76px] rounded-[22px] border-4 border-paper text-[26px]" />
         <div class="flex flex-col gap-2">
           <h1 class="font-display text-[26px] font-extrabold leading-tight tracking-tight lg:text-3xl">{{ vendor.name }}</h1>
           <div class="flex flex-wrap gap-1.5">
@@ -105,11 +103,7 @@ useSeoMeta({
             <span>{{ [vendor.delivery && `Delivery within ${vendor.city}`, vendor.pickup && 'Pickup'].filter(Boolean).join(' · ') }}</span>
           </div>
         </div>
-        <div class="grid grid-cols-[2fr_1fr_1fr] gap-2">
-          <a :href="whatsappUrl(vendor)" target="_blank" rel="noopener" class="btn-primary h-[50px]" @click="track(vendor, 'whatsapp')"><AppIcon name="chat" />WhatsApp</a>
-          <a :href="callUrl(vendor)" class="btn-outline h-[50px] px-2 text-sm" @click="track(vendor, 'call')"><AppIcon name="phone" :size="18" />Call</a>
-          <a :href="directionsUrl(vendor)" target="_blank" rel="noopener" class="btn-outline h-[50px] px-2 text-sm" @click="track(vendor, 'directions')"><AppIcon name="navigate" :size="18" />Map</a>
-        </div>
+        <ContactButtons :vendor="vendor" />
       </aside>
 
       <!-- Tabs -->
@@ -132,7 +126,7 @@ useSeoMeta({
         <div v-if="tab === 'products'" class="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
           <NuxtLink v-for="p in products" :key="p.id" :to="`/p/${p.id}`" class="flex flex-col gap-2 text-ink">
             <div class="relative">
-              <PhotoBox :tint="p.tint" class="h-[124px] rounded-2xl lg:h-44" />
+              <PhotoBox :tint="p.tint" :src="p.image" :alt="p.name" class="h-[124px] rounded-2xl lg:h-44" />
               <span v-if="!p.available" class="absolute left-2 top-2 rounded-full bg-ink px-2 py-0.5 text-[11px] font-bold text-white">Sold out</span>
             </div>
             <div class="flex flex-col gap-0.5">

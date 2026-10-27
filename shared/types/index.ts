@@ -25,6 +25,8 @@ export interface OpeningHours {
   closedDays: number[]
 }
 
+export type ContactChannel = 'whatsapp' | 'instagram' | 'phone'
+
 export interface VendorDocuments {
   idType: string
   hasSelfie: boolean
@@ -36,8 +38,16 @@ export interface Vendor {
   slug: string
   name: string
   ownerName: string
+  /** Business phone, +234… */
   phone: string
-  whatsapp: string
+  /** Digits without +; null when the vendor doesn't use WhatsApp. */
+  whatsapp: string | null
+  /** Username without @; null when not on Instagram. */
+  instagram: string | null
+  /** Show a Call button. */
+  showPhone: boolean
+  /** The highlighted contact button. */
+  primaryContact: ContactChannel
   category: CategoryId
   area: string
   city: string
@@ -55,6 +65,9 @@ export interface Vendor {
   initials: string
   tint: string
   coverTint: string
+  /** Uploaded cover photo and logo (public URLs). */
+  coverImage?: string
+  logo?: string
   joinedAt: string
   submittedAt?: string
   documents: VendorDocuments
@@ -100,7 +113,8 @@ export type ShopperStatus = 'active' | 'flagged' | 'suspended'
 export interface Shopper {
   id: string
   name: string
-  phone: string
+  phone: string | null
+  email: string | null
   area: string
   joinedAt: string
   lastActiveAt: string
@@ -116,6 +130,7 @@ export interface DailyStat {
   views: number
   visitors: number
   whatsapp: number
+  instagram: number
   calls: number
   directions: number
 }
@@ -159,7 +174,8 @@ export type Role = 'shopper' | 'vendor' | 'admin'
 export interface SessionUser {
   id: string
   name: string
-  phone: string
+  phone: string | null
+  email: string | null
   role: Role
   vendorId?: string
 }

@@ -5,6 +5,7 @@ const Body = z.object({
   price: z.number().int().min(50).max(50_000_000),
   description: z.string().trim().max(1000).default(''),
   imageKey: z.string().max(200).optional(),
+  options: ProductOptions.optional(),
 })
 
 /** POST /api/me/products: add a product. */
@@ -12,8 +13,9 @@ export default defineEventHandler(async (event) => {
   const { user, vendor } = await requireVendor(event)
   const body = await readValidatedBody(event, Body.parse)
   assertOwnKey(body.imageKey, 'product', user.id)
+  const options = body.options?.length ? body.options : null
   const [row] = await useDb().insert(schema.products).values({
-    vendorId: vendor.id, name: body.name, price: body.price, description: body.description,
+    vendorId: vendor.id, name: body.name, price: basePrice(body.price, options ?? undefined), options, description: body.description,
     imageKey: body.imageKey ?? null, tint: vendor.coverTint, photoLabel: body.name,
   }).returning()
   setResponseStatus(event, 201)

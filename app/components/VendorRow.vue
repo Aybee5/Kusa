@@ -9,7 +9,7 @@ defineProps<{ vendor: VendorWithMeta; active?: boolean; sponsored?: boolean }>()
     class="flex gap-3 border-t border-line py-3 text-ink first:border-t-0 lg:rounded-2xl lg:border lg:border-transparent lg:px-3 lg:first:border-t-transparent lg:hover:bg-surface"
     :class="active ? 'lg:!border-palm lg:bg-surface' : ''"
   >
-    <PhotoBox :tint="vendor.coverTint" class="size-[76px] shrink-0 rounded-2xl" />
+    <PhotoBox :tint="vendor.coverTint" :src="vendor.logo ?? vendor.coverImage" class="size-[76px] shrink-0 rounded-2xl" />
     <div class="flex min-w-0 flex-1 flex-col gap-[3px]">
       <div class="flex items-center gap-1.5 text-[15px] font-bold">
         <span class="truncate">{{ vendor.name }}</span>

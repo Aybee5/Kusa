@@ -1,4 +1,5 @@
-import { normalizeNgPhone } from '#shared/utils/catalog'
+import type { SignInMethod } from '#shared/types/api'
+import { normalizeEmail, normalizeNgPhone } from '#shared/utils/catalog'
 
 /**
  * Server settings, read from environment variables at runtime (see
@@ -12,7 +13,14 @@ export function serverConfig() {
     databaseUrl: env.DATABASE_URL ?? '',
     authSecret: env.AUTH_SECRET || (dev ? 'kusa-dev-secret-change-me' : ''),
     sessionDays: Number(env.SESSION_DAYS ?? 60),
+    /** Sign-in methods, first one offered first: "email", "phone", "phone,email"… */
+    signinMethods: parseMethods(env.SIGNIN_METHODS),
     smsProvider: (env.SMS_PROVIDER ?? 'console') as 'console' | 'termii',
+    emailProvider: (env.EMAIL_PROVIDER ?? 'console') as 'console' | 'resend' | 'smtp',
+    emailFrom: env.EMAIL_FROM ?? 'Kusa <no-reply@kusa.ng>',
+    resendApiKey: env.RESEND_API_KEY ?? '',
+    /** smtp(s)://user:pass@host:port */
+    smtpUrl: env.SMTP_URL ?? '',
     /** Fixed code accepted by the console provider, for development and demos. */
     devOtpCode: env.DEV_OTP_CODE ?? '123456',
     termii: {
@@ -22,6 +30,7 @@ export function serverConfig() {
       channel: env.TERMII_CHANNEL ?? 'dnd',
     },
     adminPhones: (env.ADMIN_PHONES ?? '').split(',').map((p) => normalizeNgPhone(p)).filter((p): p is string => !!p),
+    adminEmails: (env.ADMIN_EMAILS ?? '').split(',').map((e) => normalizeEmail(e)).filter((e): e is string => !!e),
     geoSearch: (env.GEO_SEARCH === 'postgis' ? 'postgis' : 'basic') as 'basic' | 'postgis',
     seedDemoData: env.SEED_DEMO_DATA ? env.SEED_DEMO_DATA === 'true' : dev,
     corsOrigins: (env.CORS_ORIGINS ?? 'capacitor://localhost,http://localhost,https://localhost').split(',').map((o) => o.trim()).filter(Boolean),
@@ -39,6 +48,11 @@ export function serverConfig() {
     /** Optional JSON to change promotion prices, e.g. {"featured":{"7":6000}} */
     promotionPrices: parseJson<Partial<Record<string, Record<string, number>>>>(env.PROMOTION_PRICES) ?? {},
   }
+}
+
+function parseMethods(raw: string | undefined): SignInMethod[] {
+  const list = (raw ?? 'email').split(',').map((m) => m.trim().toLowerCase()).filter((m): m is SignInMethod => m === 'email' || m === 'phone')
+  return list.length ? [...new Set(list)] : ['email']
 }
 
 function parseJson<T>(raw: string | undefined): T | null {

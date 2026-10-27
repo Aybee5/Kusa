@@ -1,11 +1,11 @@
 import { eq, like } from 'drizzle-orm'
 import { z } from 'zod'
-import { CATEGORIES, normalizeNgPhone, slugify } from '#shared/utils/catalog'
+import { CATEGORIES, slugify } from '#shared/utils/catalog'
 
 const Body = z.object({
   name: z.string().trim().min(2).max(80),
   category: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]),
-  whatsapp: z.string().max(20),
+  ...ContactFields,
   area: z.string().trim().min(2, 'Enter your area or neighbourhood').max(60),
   city: z.string().trim().min(2).max(60).default('Kano'),
   landmark: z.string().trim().max(120).default(''),
@@ -22,8 +22,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   if (user.role === 'admin') throw createError({ statusCode: 400, message: 'Admin accounts can’t own a business' })
   const body = await readValidatedBody(event, Body.parse)
-  const whatsapp = normalizeNgPhone(body.whatsapp)
-  if (!whatsapp) throw createError({ statusCode: 400, message: 'Enter a Nigerian WhatsApp number' })
+  const contacts = resolveContacts(body)
 
   const db = useDb()
   const { vendors, users } = schema
@@ -37,7 +36,7 @@ export default defineEventHandler(async (event) => {
 
   const vendor = await db.transaction(async (tx) => {
     const [v] = await tx.insert(vendors).values({
-      ownerId: user.id, slug, name: body.name, category: body.category, phone: whatsapp, whatsapp: whatsapp.slice(1),
+      ownerId: user.id, slug, name: body.name, category: body.category, ...contacts,
       area: body.area, city: body.city, landmark: body.landmark || null,
       lat: body.lat, lng: body.lng, delivery: body.delivery, pickup: body.pickup, coverTint: COVER[body.category] ?? '#F6E3C8',
     }).returning()

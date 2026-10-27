@@ -18,7 +18,7 @@ useSeoMeta({ title: 'Account · Kusa', robots: 'noindex' })
         <span class="flex size-12 items-center justify-center rounded-full bg-palm-tint text-palm"><AppIcon name="user" :size="24" /></span>
         <div class="flex flex-col">
           <span class="text-base font-bold">{{ user.name }}</span>
-          <span class="text-sm text-muted">{{ maskPhone(user.phone) }} · {{ user.role === 'vendor' ? 'Vendor' : user.role === 'admin' ? 'Admin' : 'Shopper' }}</span>
+          <span class="text-sm text-muted">{{ accountLabel(user) }} · {{ user.role === 'vendor' ? 'Vendor' : user.role === 'admin' ? 'Admin' : 'Shopper' }}</span>
         </div>
       </div>
       <nav class="card flex flex-col divide-y divide-line" aria-label="Account">

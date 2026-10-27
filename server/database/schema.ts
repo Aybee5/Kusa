@@ -9,7 +9,10 @@ const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull(
 /** Everyone who signs in: shoppers, vendors and admins. */
 export const users = pgTable('users', {
   id: id(),
-  phone: text('phone').notNull(),
+  // How they sign in. Each is only ever set from a confirmed code, so both are verified.
+  // Depending on SIGNIN_METHODS an account has an email address, a phone number, or both.
+  phone: text('phone'),
+  email: text('email'),
   name: text('name').notNull().default(''),
   role: text('role', { enum: ['shopper', 'vendor', 'admin'] }).notNull().default('shopper'),
   status: text('status', { enum: ['active', 'flagged', 'suspended'] }).notNull().default('active'),
@@ -18,7 +21,7 @@ export const users = pgTable('users', {
   tint: text('tint').notNull().default('#E3F1EA'),
   createdAt: createdAt(),
   lastActiveAt: timestamp('last_active_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [uniqueIndex('users_phone_idx').on(t.phone), index('users_role_status_idx').on(t.role, t.status)])
+}, (t) => [uniqueIndex('users_phone_idx').on(t.phone), uniqueIndex('users_email_idx').on(t.email), index('users_role_status_idx').on(t.role, t.status)])
 
 export const vendors = pgTable('vendors', {
   id: id(),
@@ -26,8 +29,18 @@ export const vendors = pgTable('vendors', {
   slug: text('slug').notNull(),
   name: text('name').notNull(),
   category: text('category').notNull(),
+  /** Business phone number (+234…), for calls and for Kusa to reach them. */
   phone: text('phone').notNull(),
-  whatsapp: text('whatsapp').notNull(),
+  // How shoppers reach them. WhatsApp and Instagram are optional; one of the
+  // enabled ones is the main (highlighted) button.
+  /** Digits without +, e.g. 2348030004417. Null = no WhatsApp button. */
+  whatsapp: text('whatsapp'),
+  /** Instagram username without @. Null = no Instagram button. */
+  instagram: text('instagram'),
+  showPhone: boolean('show_phone').notNull().default(true),
+  primaryContact: text('primary_contact', { enum: ['whatsapp', 'instagram', 'phone'] }).notNull().default('whatsapp'),
+  coverImageKey: text('cover_image_key'),
+  logoImageKey: text('logo_image_key'),
   area: text('area').notNull().default(''),
   city: text('city').notNull().default('Kano'),
   landmark: text('landmark'),
@@ -102,8 +115,9 @@ export const reviews = pgTable('reviews', {
   index('reviews_user_idx').on(t.userId),
 ])
 
+/** Sign-in codes, one per email address or phone number ("email:…" / "phone:+234…"). */
 export const otpCodes = pgTable('otp_codes', {
-  phone: text('phone').primaryKey(),
+  target: text('target').primaryKey(),
   codeHash: text('code_hash').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   attempts: integer('attempts').notNull().default(0),
@@ -125,6 +139,7 @@ export const vendorDailyStats = pgTable('vendor_daily_stats', {
   views: integer('views').notNull().default(0),
   visitors: integer('visitors').notNull().default(0),
   whatsapp: integer('whatsapp').notNull().default(0),
+  instagram: integer('instagram').notNull().default(0),
   calls: integer('calls').notNull().default(0),
   directions: integer('directions').notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.vendorId, t.day] })])

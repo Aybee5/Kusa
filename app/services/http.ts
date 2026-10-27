@@ -21,7 +21,7 @@ function messageOf(data?: { statusMessage?: string; message?: string }): string 
 
 /** The Kusa API over HTTP (server/api). */
 export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): KusaApi {
-  async function call<T>(path: string, opts: { method?: 'GET' | 'POST' | 'PATCH'; query?: Record<string, unknown>; body?: object } = {}): Promise<T> {
+  async function call<T>(path: string, opts: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; query?: Record<string, unknown>; body?: object } = {}): Promise<T> {
     const token = await getToken()
     try {
       return await $fetch<T>(path, {
@@ -63,8 +63,9 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     promoted: (placement, f, origin) => call('/promoted', { query: { placement, ...(f ? searchQuery(f) : {}), ...origin } }),
     recordPromotionEvent: (id, event) => call<void>(`/promotions/${id}/events`, { method: 'POST', body: { event } }).catch(() => {}),
 
-    requestCode: (phone) => call('/auth/code', { method: 'POST', body: { phone } }),
-    verifyCode: (phone, code, name) => call('/auth/verify', { method: 'POST', body: { phone, code, name } }),
+    signInOptions: () => call('/auth/options'),
+    requestCode: (to) => call('/auth/code', { method: 'POST', body: to }),
+    verifyCode: (to, code, name) => call('/auth/verify', { method: 'POST', body: { ...to, code, name } }),
     me: () => call('/auth/me'),
     signOut: () => call<void>('/auth/logout', { method: 'POST' }).catch(() => {}),
 
@@ -72,11 +73,14 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
 
     getMyVendor: () => orNull(call('/me/vendor')),
     registerVendor: (input) => call('/me/vendor', { method: 'POST', body: input }),
+    updateMyVendor: (changes) => call('/me/vendor', { method: 'PATCH', body: changes }),
     submitVerification: (input) => call('/me/vendor/verification', { method: 'POST', body: input }),
     getVendorStats: () => orNull(call('/me/vendor/stats')),
     vendorProducts: () => call('/me/products'),
     setProductAvailable: (id, available) => call<void>(`/me/products/${id}`, { method: 'PATCH', body: { available } }).then(() => {}),
     createProduct: (input) => call('/me/products', { method: 'POST', body: input }),
+    updateProduct: (id, changes) => call(`/me/products/${id}`, { method: 'PATCH', body: changes }),
+    deleteProduct: (id) => call<void>(`/me/products/${id}`, { method: 'DELETE' }).then(() => {}),
     promotionPlans: () => call('/promotions/plans'),
     myPromotions: () => call('/me/promotions'),
     requestPromotion: (input) => call('/me/promotions', { method: 'POST', body: input }),

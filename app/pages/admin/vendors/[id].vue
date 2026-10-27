@@ -63,7 +63,7 @@ useSeoMeta({ title: () => `${vendor.value?.name} · Kusa admin`, robots: 'noinde
 
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3.5">
-        <span class="flex size-[60px] items-center justify-center rounded-[18px] font-display text-xl font-extrabold" :style="{ backgroundColor: vendor.tint }">{{ vendor.initials }}</span>
+        <VendorAvatar :vendor="vendor" class="size-[60px] rounded-[18px] text-xl" />
         <div class="flex flex-col gap-1.5">
           <div class="flex flex-wrap items-center gap-2.5">
             <h1 class="font-display text-[30px] font-extrabold tracking-tight">{{ vendor.name }}</h1>
@@ -128,7 +128,17 @@ useSeoMeta({ title: () => `${vendor.value?.name} · Kusa admin`, robots: 'noinde
           <h2 class="mb-2 text-[17px] font-bold">Business details</h2>
           <dl class="grid grid-cols-[140px_1fr] gap-x-3 gap-y-2.5 text-sm">
             <dt class="text-muted">Category</dt><dd class="font-semibold">{{ categoryLabel(vendor.category) }}</dd>
-            <dt class="text-muted">WhatsApp</dt><dd class="font-semibold">{{ maskPhone(vendor.phone) }} <span class="text-palm">· verified by SMS</span></dd>
+            <dt class="text-muted">Account</dt>
+            <dd class="font-semibold">
+              <template v-if="vendor.ownerEmail">{{ vendor.ownerEmail }}</template><template v-else-if="vendor.ownerPhone">{{ maskPhone(vendor.ownerPhone) }}</template>
+              <span class="text-palm"> · confirmed by {{ vendor.ownerEmail ? 'email' : 'SMS' }} code</span>
+            </dd>
+            <dt class="text-muted">Business phone</dt><dd class="font-semibold">{{ maskPhone(vendor.phone) }}<span v-if="!vendor.showPhone" class="text-muted"> · no Call button</span></dd>
+            <dt class="text-muted">Shoppers reach them on</dt>
+            <dd class="font-semibold">
+              {{ [vendor.whatsapp && `WhatsApp ${maskPhone(vendor.whatsapp)}`, vendor.instagram && `Instagram @${vendor.instagram}`, vendor.showPhone && 'Calls'].filter(Boolean).join(' · ') }}
+              <span class="text-muted">(main: {{ vendor.primaryContact === 'phone' ? 'Calls' : vendor.primaryContact === 'instagram' ? 'Instagram' : 'WhatsApp' }})</span>
+            </dd>
             <dt class="text-muted">Location</dt><dd class="font-semibold">{{ vendor.area }}, {{ vendor.city }}<template v-if="vendor.landmark"> · {{ vendor.landmark }}</template></dd>
             <dt class="text-muted">Gets products to</dt><dd class="font-semibold">{{ [vendor.pickup && 'Pickup', vendor.delivery && 'Delivery'].filter(Boolean).join(' and ') }}</dd>
             <dt class="text-muted">Listings</dt><dd class="font-semibold">{{ vendor.listingCount }} {{ vendor.status === 'verified' ? '(live)' : '(hidden until verified)' }}</dd>

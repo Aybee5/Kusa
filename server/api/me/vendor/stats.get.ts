@@ -38,7 +38,7 @@ export default defineEventHandler(async (event): Promise<VendorStats> => {
   const byDay = new Map(daily.map((d) => [d.day, d]))
   const days: DailyStat[] = dayList.map((date) => {
     const d = byDay.get(date)
-    return { date, views: d?.views ?? 0, visitors: d?.visitors ?? 0, whatsapp: d?.whatsapp ?? 0, calls: d?.calls ?? 0, directions: d?.directions ?? 0 }
+    return { date, views: d?.views ?? 0, visitors: d?.visitors ?? 0, whatsapp: d?.whatsapp ?? 0, instagram: d?.instagram ?? 0, calls: d?.calls ?? 0, directions: d?.directions ?? 0 }
   })
   const totalSource = sources.reduce((a, r) => a + r.views, 0)
   return {

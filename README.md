@@ -21,14 +21,16 @@ npm run dev                  # http://localhost:3000
 
 On start-up the server applies database migrations and, in development, loads demo data into an empty database. Every business, person and number in the demo data is made up.
 
-In development no SMS is sent: the sign-in code is shown on screen (it's `123456`). Demo accounts:
+In development no email or SMS is sent: the sign-in code is shown on screen (it's `123456`). Sign-in is by email unless you change `SIGNIN_METHODS`. Demo accounts:
 
-| Who | Phone |
-| --- | --- |
-| Shopper (Aisha) | 0813 000 0954 |
-| Vendor (Mama Hadiza Small Chops) | 0803 000 4417 |
-| Admin | 0800 000 0001 |
-| Any other number | creates a new shopper |
+| Who | Email | Phone |
+| --- | --- | --- |
+| Shopper (Aisha) | aisha@demo.kusa.ng | 0813 000 0954 |
+| Vendor (Mama Hadiza Small Chops) | mama-hadiza-small-chops@demo.kusa.ng | 0803 000 4417 |
+| Admin | admin@demo.kusa.ng | 0800 000 0001 |
+| Anyone else | creates a new shopper | creates a new shopper |
+
+The sign-in page has buttons that fill these in.
 
 Useful scripts:
 
@@ -48,15 +50,17 @@ Useful scripts:
 - Discover page with categories, businesses close to you and new listings
 - Search with a map: distance, rating (3.5+, 4+, 4.5+), category, open now, delivery and pickup; sort by nearest or top rated. Filters live in the URL so results can be shared.
 - "Near me" from the device location (Capacitor Geolocation in the apps, the browser API on the web), falling back to central Kano
-- Vendor profile with products, reviews (average, star breakdown, written reviews, report) and opening hours
-- Product page with options and "Order on WhatsApp" with a pre-filled message
+- Vendor profile with cover photo and logo, products, reviews (average, star breakdown, written reviews, report) and opening hours
+- Contact buttons the vendor chooses: WhatsApp, Instagram and/or Call, with their main one first and highlighted, plus directions
+- Product page with photo and size options; "Order on WhatsApp" opens a pre-filled message, "Order on Instagram" opens a DM and copies the order message to paste
 - Phone sign-in, one rating per business (editable), saved businesses
 - Sponsored placements, always labelled: a Featured row and banners on the home page, sponsored businesses, a product and a banner in search results
 
 **Vendors** (`/vendor/signup`, `/vendor`, `/vendor/listings`)
-- Sign-up: phone, business details with location pin, then verification (government ID, selfie, optional proof of business) using the camera; photos upload privately
+- Sign-up: email (or phone, depending on `SIGNIN_METHODS`), business details with a business phone number, contact buttons and a location pin, then verification (government ID, selfie, optional proof of business) using the camera; photos upload privately
 - Dashboard: profile views and unique visitors for 7 or 30 days with change on the previous period, a daily chart, WhatsApp taps, calls, direction requests, how shoppers found them, rating and most viewed products
-- Listings: add products with a photo, mark items sold out
+- My shop (`/vendor/shop`): edit everything after sign-up: cover photo and logo, name, category, about, business phone, contact buttons and main button (with a live preview), opening hours and closed days, area, map pin, landmark, pickup and delivery
+- Listings: add, edit and delete products (photo, price or size options with their own prices, description), mark items sold out
 - Promote (`/vendor/promote`): request a featured spot, a banner ad (own image or a text banner, with live preview) or a promoted product for 7, 14 or 30 days, choose the city and where it shows, see the price and how to pay, add a transfer reference; then track impressions, taps and days left
 
 **Admin** (`/admin`, admins only)
@@ -88,12 +92,14 @@ shared/                types and helpers used by both app and server
 | Area | Endpoints |
 | --- | --- |
 | Public | `GET /vendors?lat&lng&q&category&minRating&openNow&delivery&pickup&radiusKm&sort` (leave out `lat`/`lng` to browse anywhere), `GET /areas`, `GET /health`, `GET /vendors/:slug`, `GET /vendors/:id/products`, `GET /vendors/:id/reviews`, `GET /products/latest`, `GET /products/:id`, `POST /vendors/:id/events`, `GET /files/:key`, `GET /promoted?placement=home\|search&…same filters`, `POST /promotions/:id/events`, `GET /promotions/plans` |
-| Auth | `POST /auth/code`, `POST /auth/verify`, `GET /auth/me`, `POST /auth/logout` |
+| Auth | `GET /auth/options`, `POST /auth/code` (`{ email }` or `{ phone }`), `POST /auth/verify`, `GET /auth/me`, `POST /auth/logout` |
 | Signed in | `POST /vendors/:id/reviews`, `GET /vendors/:id/reviews/mine`, `POST /reviews/:id/report`, `POST /uploads` |
-| Vendor | `GET/POST /me/vendor`, `POST /me/vendor/verification`, `GET /me/vendor/stats`, `GET/POST /me/products`, `PATCH /me/products/:id`, `GET/POST /me/promotions`, `PATCH /me/promotions/:id` |
+| Vendor | `GET/POST/PATCH /me/vendor`, `POST /me/vendor/verification`, `GET /me/vendor/stats`, `GET/POST /me/products`, `PATCH/DELETE /me/products/:id`, `GET/POST /me/promotions`, `PATCH /me/promotions/:id` |
 | Admin | `GET /admin/vendors`, `GET/PATCH /admin/vendors/:id`, `GET /admin/vendors/:id/products`, `GET /admin/reviews`, `PATCH /admin/reviews/:id`, `GET /admin/shoppers`, `PATCH /admin/shoppers/:id`, `GET/POST /admin/promotions`, `PATCH /admin/promotions/:id` |
 
-**Sign-in.** Phone number + 6-digit SMS code (10-minute expiry, 5 tries, one code per minute). Codes and session tokens are stored only as hashes. The app sends `Authorization: Bearer <token>`, which works the same on the website and in the native apps. Sessions last 60 days (`SESSION_DAYS`). Numbers listed in `ADMIN_PHONES` become admins when they sign in.
+**Sign-in.** A 6-digit code by email or SMS (10-minute expiry, 5 tries, one code per minute), no passwords. `SIGNIN_METHODS` decides which: `email` (the default, cheapest), `phone`, or both, where the first is offered first and the other appears as "Use … instead". To move to SMS when there's budget, set `SIGNIN_METHODS=phone,email`: new sign-ins start with a phone number, and people who joined by email still sign in by email. An account is identified by the email or phone it signed in with; each is only ever saved from a confirmed code. Email goes through `EMAIL_PROVIDER`: `console` (development), `resend` (Resend API) or `smtp` (any SMTP service, e.g. Zoho, Brevo, Mailgun). SMS goes through Termii. Codes and session tokens are stored only as hashes. The app sends `Authorization: Bearer <token>`, which works the same on the website and in the native apps. Sessions last 60 days (`SESSION_DAYS`). Addresses in `ADMIN_EMAILS` and numbers in `ADMIN_PHONES` become admins when they sign in.
+
+**Contact buttons.** Every business has a business phone number (required; it's how Kusa reaches them). Shoppers see the buttons the vendor turns on: WhatsApp (their business number or another one), Instagram (username), and Call. At least one must be on, and the vendor picks the main one. Taps on each are counted for the vendor's dashboard.
 
 **Location.** Shoppers choose how results are measured, and none of the options require sharing their location:
 - **Use my current location:** closest first. The point is sent with each search to sort results; it isn't stored on the server.
@@ -129,7 +135,7 @@ With `GEO_SEARCH=postgis`, start-up enables the extension and adds the column an
 The server is a standard Node app (`.output/server/index.mjs`) that needs a Postgres database.
 
 1. Create a database (Neon, Supabase, Railway, RDS, or your own) and set `DATABASE_URL` (add `?sslmode=require` for hosted ones).
-2. Set `AUTH_SECRET` (long random string), `ADMIN_PHONES`, `GEO_SEARCH` (`basic` or `postgis`), `SMS_PROVIDER=termii` with `TERMII_API_KEY` and `TERMII_SENDER_ID`, the `S3_*` settings for photos, and the `PAYMENT_*` settings (plus `PROMOTION_PRICES` if you want different prices).
+2. Set `AUTH_SECRET` (long random string), `ADMIN_EMAILS` (and/or `ADMIN_PHONES`), `GEO_SEARCH` (`basic` or `postgis`), sign-in: `SIGNIN_METHODS`, `EMAIL_PROVIDER` with `RESEND_API_KEY` or `SMTP_URL` and `EMAIL_FROM` (and `SMS_PROVIDER=termii` with `TERMII_API_KEY` and `TERMII_SENDER_ID` once SMS is on), the `S3_*` settings for photos, and the `PAYMENT_*` settings (plus `PROMOTION_PRICES` if you want different prices).
 3. Build and run: `npm run build && node .output/server/index.mjs`, or use the `Dockerfile` (`docker compose --profile full up --build` runs it locally with a database).
 
 Migrations run automatically when the server starts. Leave `SEED_DEMO_DATA` unset in production.
@@ -155,7 +161,8 @@ The app build has no server of its own; it calls the API at `NUXT_PUBLIC_API_BAS
 ## Before launch
 
 - Switch map tiles from OpenStreetMap's public servers (fine for development) to a provider with a production plan, e.g. MapTiler, Stadia or Mapbox, in `app/components/NearbyMap.vue`.
-- Text vendors when they're approved, asked for changes or suspended (hook point marked in `server/api/admin/vendors/[id]/index.patch.ts`).
+- Set up email sending: verify your domain with the email provider (SPF and DKIM records) so sign-in codes don't land in spam, and set `EMAIL_FROM` to an address on that domain.
+- Notify vendors (by email now, SMS later) when they're approved, asked for changes or suspended (hook point marked in `server/api/admin/vendors/[id]/index.patch.ts`).
 - Replace the review time placeholder "[X] working days" in the vendor verification step.
 - Add real Help, Terms and Privacy pages (linked in the footer), including how ID photos are stored and for how long.
 - Confirm promotion prices and set your payment account (`PROMOTION_PRICES`, `PAYMENT_*`). Add online payment (Paystack) later if manual confirmation becomes slow.

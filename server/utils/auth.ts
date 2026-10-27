@@ -2,6 +2,8 @@ import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 
 import { and, eq, gt } from 'drizzle-orm'
 import type { H3Event } from 'h3'
 import type { Role, SessionUser } from '#shared/types'
+import type { SignInMethod } from '#shared/types/api'
+import { normalizeEmail, normalizeNgPhone } from '#shared/utils/catalog'
 import type { UserRow } from '../database/schema'
 
 export const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -13,11 +15,36 @@ export function safeEqual(a: string, b: string) {
   return x.length === y.length && timingSafeEqual(x, y)
 }
 
-export function newOtpCode(): string {
-  const { smsProvider, devOtpCode } = serverConfig()
-  return smsProvider === 'console' ? devOtpCode : String(randomInt(0, 1_000_000)).padStart(6, '0')
+/** True when codes for this method are only logged (development), not really sent. */
+export function codesAreLogged(method: SignInMethod): boolean {
+  const cfg = serverConfig()
+  return method === 'email' ? cfg.emailProvider === 'console' : cfg.smsProvider === 'console'
 }
-export const hashOtp = (phone: string, code: string) => hmac(`otp:${phone}:${code}`)
+
+export function newOtpCode(method: SignInMethod): string {
+  return codesAreLogged(method) ? serverConfig().devOtpCode : String(randomInt(0, 1_000_000)).padStart(6, '0')
+}
+export const hashOtp = (target: string, code: string) => hmac(`otp:${target}:${code}`)
+
+export interface SignInTarget {
+  method: SignInMethod
+  /** Normalised email or +234 phone. */
+  value: string
+  /** Key for the codes table. */
+  key: string
+}
+
+/** Read { email } or { phone } from a request, check that method is switched on, and normalise it. */
+export function signInTarget(body: { email?: string; phone?: string }): SignInTarget {
+  const { signinMethods } = serverConfig()
+  const method: SignInMethod = body.email !== undefined ? 'email' : 'phone'
+  if (!signinMethods.includes(method)) {
+    throw createError({ statusCode: 400, message: method === 'email' ? 'Sign in with your phone number' : 'Sign in with your email address' })
+  }
+  const value = method === 'email' ? normalizeEmail(body.email ?? '') : normalizeNgPhone(body.phone ?? '')
+  if (!value) throw createError({ statusCode: 400, message: method === 'email' ? 'Enter a valid email address' : 'Enter a Nigerian mobile number, e.g. 0803 000 0000' })
+  return { method, value, key: `${method}:${value}` }
+}
 
 export async function createSession(userId: string): Promise<string> {
   const token = randomBytes(32).toString('base64url')
@@ -80,5 +107,5 @@ export async function toSessionUser(user: UserRow): Promise<SessionUser> {
     const [v] = await useDb().select({ id: schema.vendors.id }).from(schema.vendors).where(eq(schema.vendors.ownerId, user.id)).limit(1)
     vendorId = v?.id
   }
-  return { id: user.id, name: user.name, phone: user.phone, role: user.role, vendorId }
+  return { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role, vendorId }
 }

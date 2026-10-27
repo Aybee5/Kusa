@@ -26,7 +26,7 @@ const rows = computed(() => {
   const term = q.value.trim().toLowerCase()
   return (shoppers.value ?? [])
     .filter((s) => tab.value === 'all' || s.status === tab.value)
-    .filter((s) => !term || `${s.name} ${s.phone}`.toLowerCase().includes(term))
+    .filter((s) => !term || `${s.name} ${s.phone ?? ''} ${s.email ?? ''}`.toLowerCase().includes(term))
 })
 
 async function suspend(reason: string) {
@@ -87,7 +87,7 @@ useSeoMeta({ title: 'Shoppers · Kusa admin', robots: 'noindex' })
     >
       <div class="flex min-w-0 items-center gap-2.5">
         <span class="flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold" :style="{ backgroundColor: s.tint }">{{ s.initials }}</span>
-        <div class="flex min-w-0 flex-col"><span class="truncate font-bold">{{ s.name }}</span><span class="text-[13px] text-muted">{{ maskPhone(s.phone) }}</span></div>
+        <div class="flex min-w-0 flex-col"><span class="truncate font-bold">{{ s.name }}</span><span class="truncate text-[13px] text-muted">{{ accountLabel(s) }}</span></div>
       </div>
       <span class="text-ink-2"><span class="md:hidden">{{ s.area }} · {{ s.ratingCount }} ratings · </span><span class="hidden md:inline">{{ s.area }}</span><span class="md:hidden" :class="s.flagCount ? 'font-bold text-danger-ink' : ''">{{ s.flagCount }} flagged</span></span>
       <span class="hidden text-ink-2 md:inline">{{ formatDate(s.joinedAt) }}</span>
