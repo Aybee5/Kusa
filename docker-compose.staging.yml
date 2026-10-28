@@ -4,7 +4,8 @@
 #   docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
 services:
   db:
-    image: postgis/postgis:16-3.4-alpine
+    # Multi-arch build of postgis/postgis (that one is amd64 only; the staging server is arm64).
+    image: imresamu/postgis:16-3.4-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: kusa
