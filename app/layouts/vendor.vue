@@ -1,16 +1,17 @@
 <script setup lang="ts">
 const route = useRoute()
-const { user, signOut } = useSession()
+const { user } = useSession()
+const signOut = useSignOut()
 const items = computed(() => [
   { to: '/vendor', label: 'Home', icon: 'home', match: (p: string) => p === '/vendor' },
   { to: '/vendor/listings', label: 'Listings', icon: 'grid', match: (p: string) => p.startsWith('/vendor/listings') },
+  { to: '/vendor/promote', label: 'Promote', icon: 'megaphone', match: (p: string) => p.startsWith('/vendor/promote') },
   { to: user.value?.vendorId ? `/vendor/shop` : '/vendor', label: 'My shop', icon: 'store', match: (p: string) => p.startsWith('/vendor/shop') },
   { to: '/account', label: 'Account', icon: 'user', match: (p: string) => p.startsWith('/account') },
 ])
 
 async function out() {
-  await signOut()
-  await navigateTo('/')
+  await signOut('/')
 }
 </script>
 
@@ -20,7 +21,7 @@ async function out() {
       <div class="px-2"><BrandMark /></div>
       <nav aria-label="Vendor" class="flex flex-col gap-0.5">
         <NuxtLink
-          v-for="item in items.slice(0, 3)"
+          v-for="item in items.slice(0, 4)"
           :key="item.label"
           :to="item.to"
           :aria-current="item.match(route.path) ? 'page' : undefined"
@@ -43,7 +44,7 @@ async function out() {
     </main>
 
     <nav aria-label="Vendor" class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface lg:hidden">
-      <div class="grid h-[64px] grid-cols-4 px-2">
+      <div class="grid h-[64px] grid-cols-5 px-1">
         <NuxtLink
           v-for="item in items"
           :key="item.label"

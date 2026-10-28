@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RatingSummary } from '~/types'
+import type { RatingSummary } from '#shared/types'
 const props = defineProps<{ rating: RatingSummary }>()
 const bars = computed(() =>
   props.rating.breakdown.map((n, i) => ({ stars: 5 - i, pct: props.rating.count ? Math.round((n / props.rating.count) * 100) : 0 })),

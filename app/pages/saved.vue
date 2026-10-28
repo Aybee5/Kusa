@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SearchFilters } from '~/types'
+import type { SearchFilters } from '#shared/types'
 
 const api = useApi()
 const saved = useSaved()

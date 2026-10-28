@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { Product } from '~/types'
+import type { Product } from '#shared/types'
 defineProps<{ product: Product }>()
 defineEmits<{ toggle: [id: string, available: boolean] }>()
 </script>
 
 <template>
   <div class="flex items-center gap-3 border-b border-line py-2.5">
+    <NuxtLink :to="`/vendor/listings/${product.id}`" class="flex min-w-0 flex-1 items-center gap-3" :aria-label="`Edit ${product.name}`">
     <PhotoBox :tint="product.tint" :src="product.image" class="size-[54px] shrink-0 rounded-xl" />
     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
       <span class="truncate text-sm font-bold">{{ product.name }}</span>
@@ -14,6 +15,8 @@ defineEmits<{ toggle: [id: string, available: boolean] }>()
         <span class="font-semibold" :class="product.available ? 'text-palm' : 'text-amber-ink'">{{ product.available ? 'Available' : 'Sold out' }}</span>
       </span>
     </div>
+    <AppIcon name="edit" :size="18" class="shrink-0 text-muted" />
+    </NuxtLink>
     <button
       type="button"
       role="switch"

@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import type { VendorWithMeta } from '~/types'
-defineProps<{ vendor: VendorWithMeta }>()
+import type { VendorWithMeta } from '#shared/types'
+defineProps<{ vendor: VendorWithMeta; sponsored?: boolean }>()
 </script>
 
 <template>
-  <NuxtLink :to="`/v/${vendor.slug}`" class="card flex flex-col overflow-hidden text-ink transition-shadow hover:shadow-md">
-    <PhotoBox :tint="vendor.coverTint" :label="categoryLabel(vendor.category)" class="h-28 lg:h-36" />
+  <NuxtLink :to="{ path: `/v/${vendor.slug}`, query: sponsored ? { from: 'ad' } : undefined }" class="card flex flex-col overflow-hidden text-ink transition-shadow hover:shadow-md">
+    <div class="relative">
+      <PhotoBox :tint="vendor.coverTint" :src="vendor.coverImage" :alt="vendor.name" :label="categoryLabel(vendor.category)" class="h-28 lg:h-36" />
+      <SponsoredTag v-if="sponsored" class="absolute left-2.5 top-2.5" />
+    </div>
     <div class="flex flex-col gap-1 px-3.5 pb-3.5 pt-3">
       <div class="flex items-center gap-1.5 text-[15px] font-bold lg:text-base">
         <span class="truncate">{{ vendor.name }}</span>
         <VerifiedBadge />
       </div>
-      <div class="text-[13px] text-muted lg:text-sm">{{ categoryLabel(vendor.category) }} · {{ formatKm(vendor.distanceKm) }}</div>
+      <div class="text-[13px] text-muted lg:text-sm">{{ [categoryLabel(vendor.category), vendor.distanceKm != null ? formatKm(vendor.distanceKm) : vendor.area].join(' · ') }}</div>
       <div class="flex items-center gap-2 text-[13px] lg:text-sm">
         <RatingInline :rating="vendor.rating" />
         <span class="font-semibold" :class="vendor.openState.open ? (vendor.openState.closingSoon ? 'text-amber-ink' : 'text-palm') : 'text-muted'">

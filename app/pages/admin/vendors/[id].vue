@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { VendorStatus } from '~/types'
+import type { VendorStatus } from '#shared/types'
 
 definePageMeta({ layout: 'admin' })
 
@@ -7,10 +7,11 @@ const route = useRoute()
 const api = useApi()
 const toast = useToast()
 const id = String(route.params.id)
+const asset = useAssetUrl()
 
 const { data: vendor, refresh } = await useAsyncData(`admin-vendor-${id}`, () => api.adminVendor(id))
 if (!vendor.value) throw createError({ statusCode: 404, statusMessage: 'Vendor not found', fatal: true })
-const { data: products } = await useAsyncData(`admin-vendor-products-${id}`, () => api.vendorProducts(id))
+const { data: products } = await useAsyncData(`admin-vendor-products-${id}`, () => api.adminVendorProducts(id))
 
 const checks = reactive({ phone: true, name: false, face: false, place: false })
 const checkList = [
@@ -33,7 +34,7 @@ const decisionText: Partial<Record<VendorStatus, string>> = {
 const before = vendor.value.status
 
 async function decide(status: VendorStatus) {
-  await api.setVendorStatus(id, status, status === 'suspended' ? suspendReason.value || 'Other' : undefined)
+  await api.setVendorStatus(id, status, status === 'suspended' ? suspendReason.value || 'Other' : status === 'changes' || status === 'rejected' ? note.value.trim() || undefined : undefined)
   decision.value = status
   await Promise.all([refresh(), refreshNuxtData(['admin-counts', 'admin-vendors'])])
   toast.show(decisionText[status] ?? 'Saved')
@@ -62,7 +63,7 @@ useSeoMeta({ title: () => `${vendor.value?.name} · Kusa admin`, robots: 'noinde
 
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3.5">
-        <span class="flex size-[60px] items-center justify-center rounded-[18px] font-display text-xl font-extrabold" :style="{ backgroundColor: vendor.tint }">{{ vendor.initials }}</span>
+        <VendorAvatar :vendor="vendor" class="size-[60px] rounded-[18px] text-xl" />
         <div class="flex flex-col gap-1.5">
           <div class="flex flex-wrap items-center gap-2.5">
             <h1 class="font-display text-[30px] font-extrabold tracking-tight">{{ vendor.name }}</h1>
@@ -91,15 +92,18 @@ useSeoMeta({ title: () => `${vendor.value?.name} · Kusa admin`, robots: 'noinde
           <h2 class="text-[17px] font-bold">Documents</h2>
           <div class="grid grid-cols-3 gap-2.5">
             <figure class="flex flex-col gap-1.5">
-              <div class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">{{ vendor.documents.idType || 'Not uploaded' }}</div>
-              <figcaption class="text-[13px] font-semibold">Government ID</figcaption>
+              <a v-if="vendor.documentUrls?.id" :href="asset(vendor.documentUrls.id)" target="_blank" rel="noopener" class="block h-[150px] overflow-hidden rounded-xl bg-[#ECE6D8]"><img :src="asset(vendor.documentUrls.id)" :alt="`${vendor.documents.idType} photo`" class="size-full object-cover" /></a>
+              <div v-else class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">Not uploaded</div>
+              <figcaption class="text-[13px] font-semibold">Government ID<span v-if="vendor.documents.idType" class="font-normal text-muted"> · {{ vendor.documents.idType }}</span></figcaption>
             </figure>
             <figure class="flex flex-col gap-1.5">
-              <div class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">{{ vendor.documents.hasSelfie ? 'Selfie with ID' : 'Not uploaded' }}</div>
+              <a v-if="vendor.documentUrls?.selfie" :href="asset(vendor.documentUrls.selfie)" target="_blank" rel="noopener" class="block h-[150px] overflow-hidden rounded-xl bg-[#ECE6D8]"><img :src="asset(vendor.documentUrls.selfie)" alt="Selfie holding ID" class="size-full object-cover" /></a>
+              <div v-else class="photo-ph flex h-[150px] items-center justify-center rounded-xl bg-[#ECE6D8] px-2 text-center text-xs text-ink-2">Not uploaded</div>
               <figcaption class="text-[13px] font-semibold">Selfie</figcaption>
             </figure>
             <figure class="flex flex-col gap-1.5">
-              <div class="photo-ph flex h-[150px] items-center justify-center rounded-xl px-2 text-center text-xs text-ink-2" :style="{ backgroundColor: vendor.coverTint }">{{ vendor.documents.hasBusinessProof ? 'Photo of business' : 'Not provided' }}</div>
+              <a v-if="vendor.documentUrls?.proof" :href="asset(vendor.documentUrls.proof)" target="_blank" rel="noopener" class="block h-[150px] overflow-hidden rounded-xl bg-[#ECE6D8]"><img :src="asset(vendor.documentUrls.proof)" alt="Proof of business" class="size-full object-cover" /></a>
+              <div v-else class="photo-ph flex h-[150px] items-center justify-center rounded-xl px-2 text-center text-xs text-ink-2" :style="{ backgroundColor: vendor.coverTint }">Not provided</div>
               <figcaption class="text-[13px] font-semibold">Proof of business</figcaption>
             </figure>
           </div>
@@ -124,7 +128,17 @@ useSeoMeta({ title: () => `${vendor.value?.name} · Kusa admin`, robots: 'noinde
           <h2 class="mb-2 text-[17px] font-bold">Business details</h2>
           <dl class="grid grid-cols-[140px_1fr] gap-x-3 gap-y-2.5 text-sm">
             <dt class="text-muted">Category</dt><dd class="font-semibold">{{ categoryLabel(vendor.category) }}</dd>
-            <dt class="text-muted">WhatsApp</dt><dd class="font-semibold">{{ maskPhone(vendor.phone) }} <span class="text-palm">· verified by SMS</span></dd>
+            <dt class="text-muted">Account</dt>
+            <dd class="font-semibold">
+              <template v-if="vendor.ownerEmail">{{ vendor.ownerEmail }}</template><template v-else-if="vendor.ownerPhone">{{ maskPhone(vendor.ownerPhone) }}</template>
+              <span class="text-palm"> · confirmed by {{ vendor.ownerEmail ? 'email' : 'SMS' }} code</span>
+            </dd>
+            <dt class="text-muted">Business phone</dt><dd class="font-semibold">{{ maskPhone(vendor.phone) }}<span v-if="!vendor.showPhone" class="text-muted"> · no Call button</span></dd>
+            <dt class="text-muted">Shoppers reach them on</dt>
+            <dd class="font-semibold">
+              {{ [vendor.whatsapp && `WhatsApp ${maskPhone(vendor.whatsapp)}`, vendor.instagram && `Instagram @${vendor.instagram}`, vendor.showPhone && 'Calls'].filter(Boolean).join(' · ') }}
+              <span class="text-muted">(main: {{ vendor.primaryContact === 'phone' ? 'Calls' : vendor.primaryContact === 'instagram' ? 'Instagram' : 'WhatsApp' }})</span>
+            </dd>
             <dt class="text-muted">Location</dt><dd class="font-semibold">{{ vendor.area }}, {{ vendor.city }}<template v-if="vendor.landmark"> · {{ vendor.landmark }}</template></dd>
             <dt class="text-muted">Gets products to</dt><dd class="font-semibold">{{ [vendor.pickup && 'Pickup', vendor.delivery && 'Delivery'].filter(Boolean).join(' and ') }}</dd>
             <dt class="text-muted">Listings</dt><dd class="font-semibold">{{ vendor.listingCount }} {{ vendor.status === 'verified' ? '(live)' : '(hidden until verified)' }}</dd>

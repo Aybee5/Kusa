@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RatingSummary } from '~/types'
+import type { RatingSummary } from '#shared/types'
 defineProps<{ rating: RatingSummary; size?: number }>()
 </script>
 

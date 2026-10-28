@@ -56,15 +56,22 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // Leave empty to use the built-in demo data (app/services/mock).
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || '',
+      // Where the app finds the API. '/api' on the website (same server). The
+      // native apps need the full address, e.g. https://kusa.ng/api, set when
+      // running `npm run cap:sync`.
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || (isApp ? 'https://kusa.ng/api' : '/api'),
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kusa.ng',
       buildTarget: isApp ? 'app' : 'web',
+      showDemoAccounts: process.env.NUXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true',
     },
   },
 
-  // The app bundle is a single page; Capacitor serves index.html for every route.
-  nitro: isApp ? { prerender: { crawlLinks: false, routes: ['/'] } } : {},
+  nitro: {
+    // SQL migrations ship inside the server build and run on start-up.
+    serverAssets: [{ baseName: 'migrations', dir: './database/migrations' }],
+    // The app bundle is a single page; Capacitor serves index.html for every route.
+    ...(isApp ? { prerender: { crawlLinks: false, routes: ['/'] } } : {}),
+  },
 
   typescript: {
     strict: true,

@@ -1,0 +1,43 @@
+# Staging (kusa.yasr.app): database + web/API server, with the web port only on
+# localhost for Caddy to proxy. Settings come from .env.staging on the server
+# (copy .env.example; at least AUTH_SECRET, and EMAIL_* to send real codes).
+#   docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kusa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kusa}
+      POSTGRES_DB: kusa
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kusa"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      args:
+        NUXT_PUBLIC_SITE_URL: https://kusa.yasr.app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env.staging
+    environment:
+      DATABASE_URL: postgres://kusa:${POSTGRES_PASSWORD:-kusa}@db:5432/kusa
+      GEO_SEARCH: postgis
+      SEED_DEMO_DATA: "true"
+      NUXT_PUBLIC_SHOW_DEMO_ACCOUNTS: "true"
+      UPLOADS_DIR: /data/uploads
+    ports:
+      - "127.0.0.1:3100:3000"
+    volumes:
+      - uploads:/data/uploads
+
+volumes:
+  db-data:
+  uploads:

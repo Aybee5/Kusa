@@ -5,9 +5,9 @@ const api = useApi()
 const { user } = useRequireRole('vendor')
 const vendorId = computed(() => user.value?.vendorId ?? '')
 
-const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ? api.getMyVendor(vendorId.value) : Promise.resolve(null)), { watch: [vendorId], server: false })
-const { data: stats } = await useAsyncData('my-stats', () => (vendorId.value ? api.getVendorStats(vendorId.value) : Promise.resolve(null)), { watch: [vendorId], server: false })
-const { data: products, refresh: refreshProducts } = await useAsyncData('my-products', () => (vendorId.value ? api.vendorProducts(vendorId.value) : Promise.resolve([])), { watch: [vendorId], server: false })
+const { data: vendor } = await useAsyncData('my-vendor', () => (vendorId.value ? api.getMyVendor() : Promise.resolve(null)), { watch: [vendorId], server: false })
+const { data: stats } = await useAsyncData('my-stats', () => (vendorId.value ? api.getVendorStats() : Promise.resolve(null)), { watch: [vendorId], server: false })
+const { data: products, refresh: refreshProducts } = await useAsyncData('my-products', () => (vendorId.value ? api.vendorProducts() : Promise.resolve([])), { watch: [vendorId], server: false })
 const { data: rating } = await useAsyncData('my-rating', async () => {
   if (!vendor.value || vendor.value.status !== 'verified') return null
   return (await api.getVendor(vendor.value.slug, { lat: vendor.value.lat, lng: vendor.value.lng }))?.rating ?? null
@@ -16,7 +16,7 @@ const { data: rating } = await useAsyncData('my-rating', async () => {
 const range = ref<7 | 30>(7)
 const current = computed(() => stats.value?.daily.slice(-range.value) ?? [])
 const previous = computed(() => stats.value?.daily.slice(-range.value * 2, -range.value) ?? [])
-const sum = (rows: typeof current.value, k: 'views' | 'visitors' | 'whatsapp' | 'calls' | 'directions') => rows.reduce((a, r) => a + r[k], 0)
+const sum = (rows: typeof current.value, k: 'views' | 'visitors' | 'whatsapp' | 'instagram' | 'calls' | 'directions') => rows.reduce((a, r) => a + r[k], 0)
 
 const kpis = computed(() => {
   const change = (k: 'views' | 'visitors') => {
@@ -30,10 +30,19 @@ const kpis = computed(() => {
     viewsChange: change('views'),
     visitorsChange: change('visitors'),
     whatsapp: sum(current.value, 'whatsapp'),
+    instagram: sum(current.value, 'instagram'),
     calls: sum(current.value, 'calls'),
     directions: sum(current.value, 'directions'),
   }
 })
+
+// Taps for the channels this vendor uses (or used during the period).
+const tapTiles = computed(() => [
+  (vendor.value?.whatsapp || kpis.value.whatsapp) && { label: 'WhatsApp taps', value: kpis.value.whatsapp },
+  (vendor.value?.instagram || kpis.value.instagram) && { label: 'Instagram taps', value: kpis.value.instagram },
+  (vendor.value?.showPhone || kpis.value.calls) && { label: 'Calls', value: kpis.value.calls },
+  { label: 'Direction requests', value: kpis.value.directions },
+].filter((t): t is { label: string; value: number } => !!t))
 
 const topProducts = computed(() => {
   const views = stats.value?.productViews ?? {}
@@ -63,7 +72,7 @@ useSeoMeta({ title: 'My shop · Kusa', robots: 'noindex' })
 
     <template v-else>
       <div class="flex items-center gap-3">
-        <span class="flex size-12 shrink-0 items-center justify-center rounded-[15px] font-display text-[17px] font-extrabold lg:size-14" :style="{ backgroundColor: vendor.tint }">{{ vendor.initials }}</span>
+        <VendorAvatar :vendor="vendor" class="size-12 rounded-[15px] text-[17px] lg:size-14" />
         <div class="flex min-w-0 flex-1 flex-col">
           <span class="text-[13px] text-muted">Sannu, {{ firstName }}</span>
           <h1 class="truncate text-base font-bold lg:font-display lg:text-2xl lg:font-extrabold lg:tracking-tight">{{ vendor.name }}</h1>
@@ -97,11 +106,12 @@ useSeoMeta({ title: 'My shop · Kusa', robots: 'noindex' })
                 <span class="text-xs font-bold" :class="(kpis.visitorsChange ?? 0) >= 0 ? 'text-palm' : 'text-danger-ink'">{{ changeLabel(kpis.visitorsChange) }}</span>
               </div>
             </div>
-            <TrafficChart :days="current" />
-            <div class="grid grid-cols-3 gap-2 border-t border-line-2 pt-3">
-              <div class="flex flex-col gap-0.5"><span class="font-display text-[22px] font-extrabold leading-none">{{ kpis.whatsapp }}</span><span class="text-xs text-muted">WhatsApp taps</span></div>
-              <div class="flex flex-col gap-0.5"><span class="font-display text-[22px] font-extrabold leading-none">{{ kpis.calls }}</span><span class="text-xs text-muted">Calls</span></div>
-              <div class="flex flex-col gap-0.5"><span class="font-display text-[22px] font-extrabold leading-none">{{ kpis.directions }}</span><span class="text-xs text-muted">Direction requests</span></div>
+            <TrafficChart v-if="kpis.views" :days="current" />
+            <p v-else class="rounded-xl bg-paper px-4 py-6 text-center text-sm text-ink-2">
+              No visits yet{{ vendor.status === 'verified' ? '' : ' (your shop goes live once verified)' }}. Share your shop link on WhatsApp to get your first visitors.
+            </p>
+            <div class="grid gap-2 border-t border-line-2 pt-3" :style="{ gridTemplateColumns: `repeat(${tapTiles.length}, minmax(0, 1fr))` }">
+              <div v-for="t in tapTiles" :key="t.label" class="flex flex-col gap-0.5"><span class="font-display text-[22px] font-extrabold leading-none">{{ t.value }}</span><span class="text-xs text-muted">{{ t.label }}</span></div>
             </div>
           </div>
           <p class="text-xs text-muted">A visitor is one person (one phone or computer) per day. Views count every time your shop or products are opened.</p>

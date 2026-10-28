@@ -1,0 +1,95 @@
+# Checks every pull request and every push to main; deploys main to staging
+# (https://kusa.yasr.app) once the checks pass.
+#
+# Deploying needs these repository secrets (Settings → Secrets and variables → Actions):
+#   STAGING_HOST              server address (the server's IP, not the Cloudflare-proxied domain)
+#   STAGING_USER              SSH user that can run docker
+#   STAGING_SSH_KEY           private key for that user (its public key in ~/.ssh/authorized_keys on the server)
+#   STAGING_SSH_KNOWN_HOSTS   output of `ssh-keyscan <server address>`
+# and ~/kusa/.env.staging on the server (see README › Staging).
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Type-check, build and API checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      db:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: kusa
+          POSTGRES_PASSWORD: kusa
+          POSTGRES_DB: kusa
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U kusa"
+          --health-interval 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: API checks (fresh database with demo data)
+        env:
+          DATABASE_URL: postgres://kusa:kusa@localhost:5432/kusa
+          AUTH_SECRET: ci-only-secret
+          SMS_PROVIDER: console
+          EMAIL_PROVIDER: console
+          SIGNIN_METHODS: phone,email
+          GEO_SEARCH: postgis
+          SEED_DEMO_DATA: "true"
+          UPLOADS_DIR: ${{ runner.temp }}/uploads
+          PORT: "3000"
+        run: |
+          node .output/server/index.mjs > "$RUNNER_TEMP/server.log" 2>&1 &
+          curl -fsS --retry 40 --retry-delay 1 --retry-all-errors http://localhost:3000/api/health
+          BASE=http://localhost:3000 EXPECT_GEO=postgis EXPECT_METHODS=phone,email npm run test:api
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/server.log"
+
+  deploy:
+    name: Deploy to staging
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: staging
+      url: https://kusa.yasr.app
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KEY" || { echo "::error::Add the STAGING_SSH_KEY secret (see the top of this file)"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+      - name: Deploy
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+        run: scripts/deploy-staging.sh

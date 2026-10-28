@@ -7,7 +7,7 @@ const { origin } = useLocation()
 const { user, ready } = useSession()
 const slug = String(route.params.slug)
 
-const { data: vendor } = await useAsyncData(`vendor-${slug}`, () => api.getVendor(slug, origin.value))
+const { data: vendor } = await useAsyncData(`rate-vendor-${slug}`, () => api.getVendor(slug, origin.value))
 if (!vendor.value) throw createError({ statusCode: 404, statusMessage: 'Business not found', fatal: true })
 
 const stars = ref(0)
@@ -23,7 +23,7 @@ const tagOptions = computed(() => reviewTagsFor(vendor.value!.category))
 watch([ready, user], async () => {
   if (!ready.value) return
   if (!user.value) return navigateTo({ path: '/signin', query: { redirect: route.fullPath } }, { replace: true })
-  const mine = await api.myReview(vendor.value!.id, user.value.id)
+  const mine = await api.myReview(vendor.value!.id)
   if (mine) {
     stars.value = mine.stars
     tags.value = [...mine.tags]
@@ -39,8 +39,14 @@ function toggleTag(t: string) {
 async function submit() {
   if (!user.value || !stars.value) return
   saving.value = true
-  await api.saveReview({ vendorId: vendor.value!.id, shopperId: user.value.id, stars: stars.value, tags: tags.value, text: text.value.trim() })
-  await refreshNuxtData([`vendor-${slug}`, `vendor-reviews-${slug}`])
+  try {
+    await api.saveReview({ vendorId: vendor.value!.id, stars: stars.value, tags: tags.value, text: text.value.trim() })
+  } catch (e) {
+    saving.value = false
+    useToast().show((e as Error).message)
+    return
+  }
+  await refreshNuxtData([`vendor-${slug}`, `rate-vendor-${slug}`, `vendor-reviews-${slug}`])
   saving.value = false
   sent.value = true
 }
@@ -58,7 +64,7 @@ useSeoMeta({ title: () => `Rate ${vendor.value?.name} · Kusa`, robots: 'noindex
         </div>
 
         <div class="flex items-center gap-3">
-          <span class="flex size-[52px] shrink-0 items-center justify-center rounded-2xl font-display text-lg font-extrabold" :style="{ backgroundColor: vendor.tint }">{{ vendor.initials }}</span>
+          <VendorAvatar :vendor="vendor" class="size-[52px] rounded-2xl text-lg" />
           <div class="flex flex-col gap-0.5">
             <h1 class="font-display text-2xl font-extrabold leading-tight tracking-tight">{{ editing ? 'Edit your rating for' : 'Rate' }} {{ vendor.name }}</h1>
             <span class="text-[13px] text-muted">{{ categoryLabel(vendor.category) }} · {{ vendor.area }}, {{ vendor.city }}</span>

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 const route = useRoute()
+const { user } = useRequireRole('admin')
+const signOut = useSignOut()
 const api = useApi()
 const { data: counts } = await useAsyncData('admin-counts', async () => {
-  const [vendors, reviews] = await Promise.all([api.adminVendors(), api.adminReviews()])
+  const [vendors, reviews, promotions] = await Promise.all([api.adminVendors(), api.adminReviews(), api.adminPromotions()])
   return {
     pending: vendors.filter((v) => v.status === 'pending').length,
     flagged: reviews.filter((r) => r.status === 'flagged').length,
+    requests: promotions.filter((p) => p.state === 'pending').length,
   }
 })
 
@@ -13,6 +16,7 @@ const items = computed(() => [
   { to: '/admin/vendors', label: 'Vendors', icon: 'store', badge: counts.value?.pending },
   { to: '/admin/reviews', label: 'Reviews', icon: 'star', badge: counts.value?.flagged },
   { to: '/admin/shoppers', label: 'Shoppers', icon: 'users', badge: 0 },
+  { to: '/admin/promotions', label: 'Promotions', icon: 'megaphone', badge: counts.value?.requests },
 ])
 const isActive = (to: string) => route.path.startsWith(to)
 </script>
@@ -37,7 +41,9 @@ const isActive = (to: string) => route.path.startsWith(to)
       </nav>
       <div class="mt-auto flex flex-col gap-3 border-t border-white/10 pt-4 text-xs text-[#C9D1CC]">
         <NuxtLink to="/" class="flex min-h-[42px] items-center gap-2.5 rounded-[10px] px-2.5 text-sm font-semibold text-[#C9D1CC] hover:bg-white/5"><AppIcon name="compass" :size="18" />Open Kusa</NuxtLink>
-        <p class="px-2.5 leading-snug">Demo console. Admin sign-in and permissions come with the backend.</p>
+        <button type="button" class="flex min-h-[42px] cursor-pointer items-center gap-2.5 rounded-[10px] px-2.5 text-left text-sm font-semibold text-[#C9D1CC] hover:bg-white/5" @click="signOut('/')">
+          <AppIcon name="logout" :size="18" />Sign out<span v-if="user" class="truncate font-normal opacity-70">· {{ user.name || accountLabel(user) }}</span>
+        </button>
       </div>
     </aside>
 

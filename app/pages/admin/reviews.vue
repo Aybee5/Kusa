@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ReviewStatus } from '~/types'
+import type { ReviewStatus } from '#shared/types'
 
 definePageMeta({ layout: 'admin' })
 
