@@ -1,11 +1,11 @@
 export type CategoryId =
   | 'small-chops'
-  | 'snacks'
   | 'quick-meals'
   | 'drinks'
   | 'cakes'
-  | 'jewellery'
+  | 'clothing'
   | 'fashion'
+  | 'jewellery'
   | 'beauty'
 
 export interface Category {
@@ -13,6 +13,8 @@ export interface Category {
   label: string
   tint: string
   dot: string
+  /** Words shoppers might search for that mean this category, e.g. "abaya" → Clothing. */
+  keywords: string[]
 }
 
 export type VendorStatus = 'pending' | 'verified' | 'changes' | 'rejected' | 'suspended'

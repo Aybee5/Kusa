@@ -1,12 +1,11 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { CATEGORIES } from '#shared/utils/catalog'
 import { STATE_NAMES } from '#shared/utils/states'
 
 const Time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 09:00')
 const Body = z.object({
   name: z.string().trim().min(2).max(80).optional(),
-  category: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]).optional(),
+  category: CategoryField.optional(),
   about: z.string().trim().max(600).optional(),
   area: z.string().trim().min(2).max(60).optional(),
   city: z.string().trim().min(2).max(60).optional(),

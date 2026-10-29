@@ -40,7 +40,7 @@ export const vendors: DemoVendor[] = [
   },
   {
     id: 'v4', slug: 'crunch-and-co', name: 'Crunch & Co.', ownerName: 'Ngozi Okafor',
-    phone: '+2348160001190', whatsapp: '2348160001190', category: 'snacks', area: 'Nassarawa GRA', city: 'Kano',
+    phone: '+2348160001190', whatsapp: '2348160001190', category: 'small-chops', area: 'Nassarawa GRA', city: 'Kano',
     ...at(0.5, -0.6), status: 'verified', hours: hours('08:00', '19:00', [0]), delivery: false, pickup: true,
     initials: 'CC', tint: '#F4ECC4', coverTint: '#F4ECC4', joinedAt: '2026-08-14',
     about: 'Chin chin, plantain chips and coconut candy in jars and party packs.', documents: docs(),
@@ -150,6 +150,27 @@ vendors.push(
     initials: 'ZB', tint: '#E4E1F2', coverTint: '#E4E1F2', joinedAt: '2026-10-10',
     about: 'Handmade waist beads, bead bags and bridal sets, made to order.', documents: docs(),
   },
+  {
+    id: 'v19', slug: 'zahra-abaya-house', name: 'Zahra Abaya House', ownerName: 'Zahra Muhammad',
+    phone: '+2348170000105', whatsapp: '2348170000105', category: 'clothing', area: 'Kofar Wambai', city: 'Kano', state: 'Kano',
+    ...at(0.7, -1.6), status: 'verified', hours: hours('09:00', '18:00', [5]), delivery: true, pickup: true,
+    initials: 'ZA', tint: '#DCE5F3', coverTint: '#DCE5F3', joinedAt: '2026-10-12', instagram: 'zahraabayahouse',
+    about: 'Abayas, jalabiyas and hijab sets in chiffon, crepe and silk. Sizes S to 3XL; custom lengths in three days.', documents: docs(),
+  },
+  {
+    id: 'v20', slug: 'sadiq-kaftan-and-babban-riga', name: 'Sadiq Kaftan & Babban Riga', ownerName: 'Sadiq Lawan',
+    phone: '+2348170000106', whatsapp: '2348170000106', category: 'clothing', area: 'Fagge', city: 'Kano', state: 'Kano',
+    ...at(1.6, 0.2), status: 'verified', hours: hours('10:00', '19:00', [5]), delivery: true, pickup: true,
+    initials: 'SK', tint: '#E3E8EE', coverTint: '#E3E8EE', joinedAt: '2026-10-14',
+    about: 'Men’s kaftans, babban riga and caps, sewn to measure. Bring your own fabric or choose from ours.', documents: docs(),
+  },
+  {
+    id: 'v21', slug: 'surulere-ankara-studio', name: 'Surulere Ankara Studio', ownerName: 'Funke Adebayo',
+    phone: '+2348170000107', whatsapp: '2348170000107', category: 'clothing', area: 'Surulere', city: 'Lagos', state: 'Lagos',
+    lat: 6.4969, lng: 3.354, status: 'verified', hours: hours('09:00', '19:00', [0]), delivery: true, pickup: true,
+    initials: 'SA', tint: '#F6E0D2', coverTint: '#F6E0D2', joinedAt: '2026-10-16', instagram: 'surulereankara', primaryContact: 'instagram',
+    about: 'Ankara gowns, two-piece sets and aso-ebi for owambe, made to measure in a week.', documents: docs(),
+  },
 )
 
 // Demo cover photos are in public/images/vendors, named after the slug
@@ -201,6 +222,14 @@ export const products: Product[] = [
   p('v17', 'Beef suya, 1 portion', 3000, '#FBE7D9', 'Beef suya', 'With onions, tomatoes and yaji.'),
   p('v18', 'Beaded waist set', 7500, '#E4E1F2', 'Waist beads', 'Set of three in your colours, made to your size.'),
   p('v18', 'Bridal bead set', 38000, '#D9EBE6', 'Bridal beads', 'Necklace, bracelet and earrings for the big day.'),
+  p('v19', 'Abaya, black chiffon', 18000, '#DCE5F3', 'Abaya', 'Flowing chiffon abaya with matching scarf.',
+    { options: [{ label: 'S–M', price: 18000 }, { label: 'L–XL', price: 19500 }, { label: '2XL–3XL', price: 21000 }] }),
+  p('v19', 'Jalabiya, embroidered', 15000, '#E4E1F2', 'Jalabiya', 'Crepe jalabiya with hand embroidery on the sleeves.'),
+  p('v19', 'Hijab set, 3 pieces', 6000, '#EFE0EC', 'Hijab set', 'Three premium jersey hijabs in neutral colours.'),
+  p('v20', 'Kaftan, sewn to measure', 22000, '#E3E8EE', 'Kaftan', 'Men’s kaftan with trousers in cotton or cashmere.'),
+  p('v20', 'Babban riga, full set', 65000, '#D9EBE6', 'Babban riga', 'Embroidered babban riga with kaftan, trousers and cap.'),
+  p('v21', 'Ankara gown, made to measure', 25000, '#F6E0D2', 'Ankara gown', 'Your style and size; fabric included.'),
+  p('v21', 'Ankara two-piece set', 18000, '#FBE7D9', 'Ankara set', 'Top and wrapper or trousers in matching ankara.'),
 ]
 
 /**
@@ -223,6 +252,9 @@ export const seedRatings: Record<string, [number, number, number, number, number
   v16: [26, 5, 1, 0, 0],
   v17: [18, 9, 3, 1, 1],
   v18: [12, 4, 1, 0, 0],
+  v19: [34, 6, 1, 0, 0],
+  v20: [21, 7, 2, 0, 1],
+  v21: [17, 6, 2, 1, 0],
 }
 
 export const shoppers: Omit<Shopper, 'email'>[] = [

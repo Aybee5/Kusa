@@ -1,6 +1,6 @@
 # Kusa
 
-Find small businesses near you: small chops, snacks, cakes, jewellery, fashion, beauty and more. Vendors register, get verified by hand and list their products. Shoppers search by location, category and rating, then reach the vendor on WhatsApp or by phone. Admins verify vendors, moderate reviews and manage shoppers.
+Find small businesses near you: small chops and snacks, cakes, clothing (abaya, kaftan, ankara…), shoes, jewellery, beauty and more. Vendors register, get verified by hand and list their products. Shoppers search by location, category and rating, then reach the vendor on WhatsApp or by phone. Admins verify vendors, moderate reviews and manage shoppers.
 
 One codebase, three things:
 
@@ -48,7 +48,7 @@ Useful scripts:
 
 **Shoppers** (`/`, `/search`, `/v/:slug`, `/p/:id`)
 - Discover page with categories, businesses close to you and new listings
-- Search with a map: distance (any distance by default, or within 1–25 km), rating (3.5+, 4+, 4.5+), category, open now, delivery and pickup; sort by nearest or top rated. Filters live in the URL so results can be shared.
+- Search with a map: distance (within 10 km by default when using your location, any distance otherwise), rating (3.5+, 4+, 4.5+), category, open now, delivery and pickup; sort by nearest or top rated. Filters live in the URL so results can be shared, and "Clear filters" turns them all off (keeping the search text and location).
 - "Near me" from the device location (Capacitor Geolocation in the apps, the browser API on the web), falling back to central Kano
 - Vendor profile with cover photo and logo, products, reviews (average, star breakdown, written reviews, report) and opening hours
 - Contact buttons the vendor chooses: WhatsApp, Instagram and/or Call, with their main one first and highlighted, plus directions
@@ -111,6 +111,8 @@ shared/                types and helpers used by both app and server
 Until they choose, results are sorted from a default area (central Kano), labelled as the default. The choice is remembered on the device. Sponsored slots follow the place too: a vendor's promotion only shows when browsing their state or city (or their target cities), while Kusa's own banners show everywhere.
 
 Every business has a state (one of the 36 or FCT), suggested from its map pin at sign-up and editable in My shop; city and area are typed. Vendors mark their shop by tapping the map or dragging a pin; sharing their phone's location is optional. Existing businesses got their state from their city name, or the nearest state capital to their pin (migration `0005_vendor_state.sql`).
+
+**Categories.** Small chops & snacks, Quick meals, Drinks, Cakes & pastries, Clothing, Shoes & accessories, Jewellery and Beauty (`shared/utils/catalog.ts`). Each has search keywords, so searching "abaya", "kaftan" or "ankara" finds clothing businesses even when the word isn't in their name. "Snacks" was merged into "Small chops & snacks" (migration `0006_merge_snacks.sql`); old `category=snacks` links still work.
 
 **Search.** Every filter (distance, category, rating, open now, delivery, pickup, text) and both sorts run in the database, so the 100 results returned are always the right 100.
 
