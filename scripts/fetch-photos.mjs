@@ -109,11 +109,13 @@ function credit(path, info) {
   writeFileSync(creditsPath, `${text}\n| ${file} | ${info.author.replace(/\|/g, '/')} | ${info.licence} | ${info.source} |\n`)
 }
 
-async function save(entry, info) {
+async function save(entry, info, preview) {
   const out = `${ROOT}public/images/${entry.path}`
   mkdirSync(dirname(out), { recursive: true })
   const [w, h] = entry.size
-  await sharp(await download(info.thumb)).resize(w, h, { fit: 'cover', position: 'attention' }).webp({ quality: 78 }).toFile(out)
+  // A candidate's preview is already cropped to size, so reuse it rather than download again.
+  const source = preview && existsSync(preview) ? readFileSync(preview) : await download(info.thumb)
+  await sharp(source).resize(w, h, { fit: 'cover', position: 'attention' }).webp({ quality: 80 }).toFile(out)
   credit(entry.path, info)
   console.log(`✓ ${entry.path}  ←  ${info.title} (${info.licence}, ${info.author})`)
 }
@@ -134,7 +136,7 @@ if (flag('candidates')) {
     all[e.path] = list
     for (const [n, info] of list.entries()) {
       const file = `${CANDIDATES}/${e.path.replace(/[/.]/g, '_')}-${n + 1}.jpg`
-      await sharp(await download(info.thumb)).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 80 }).toFile(file)
+      await sharp(await download(info.thumb)).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 90 }).toFile(file)
     }
     console.log(`${e.path}: ${list.length ? list.map((c, n) => `\n  ${n + 1}. ${c.title} · ${c.licence} · ${c.author}`).join('') : ' no free-licence results; try other queries'}`)
     writeFileSync(saved, JSON.stringify(all, null, 2))
@@ -146,7 +148,7 @@ if (flag('candidates')) {
     const entry = manifest.photos.find((e) => e.path === path)
     const info = all[path]?.[n - 1]
     if (!entry || !info) throw new Error(`No candidate ${n} for ${path}; run --candidates first`)
-    await save(entry, info)
+    await save(entry, info, `${CANDIDATES}/${path.replace(/[/.]/g, '_')}-${n}.jpg`)
   }
 } else {
   const pinned = entries.filter((e) => e.file)
