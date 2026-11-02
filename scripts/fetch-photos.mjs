@@ -4,7 +4,8 @@
 //   npm run photos:fetch -- --candidates            save up to 4 candidates per photo in .photo-candidates/ to look at
 //   npm run photos:fetch -- --pick categories/drinks.webp=2 [more…]   use a candidate
 //   npm run photos:fetch                             fetch photos that have a pinned "file" in scripts/photo-manifest.json
-//   add --only <path> to limit to one photo
+//   add --only <path> to limit to one photo, or --missing for photos whose file doesn't exist yet
+//   PHOTO_CANDIDATES=2 for fewer candidates; PHOTO_DOWNLOAD_GAP_MS=45000 to space downloads on strictly limited connections
 //
 // Needs internet access to commons.wikimedia.org and upload.wikimedia.org.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -26,9 +27,32 @@ const picks = Object.fromEntries(args.filter((a) => /\.webp=\d+$/.test(a)).map((
 const FREE = /^(cc0|cc[- ]by(-sa)?[- ][\d.]+|cc[- ]by(-sa)?|public domain|pd(-\w+)?)/i
 const strip = (html = '') => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+// Gap between requests to each host. Image downloads can be spaced out further
+// with PHOTO_DOWNLOAD_GAP_MS on connections Wikimedia limits strictly (cloud servers).
+const GAP = { default: 1000, 'upload.wikimedia.org': Number(process.env.PHOTO_DOWNLOAD_GAP_MS ?? 1000) }
+const last = {}
+/** One request at a time, spaced out per host, retrying politely when Wikimedia says to slow down. */
+async function politeFetch(url) {
+  const host = new URL(url).host
+  for (let attempt = 0; ; attempt++) {
+    const wait = (last[host] ?? 0) + (GAP[host] ?? GAP.default) - Date.now()
+    if (wait > 0) await sleep(wait)
+    last[host] = Date.now()
+    const res = await fetch(url, { headers: { 'User-Agent': UA } })
+    if ((res.status === 429 || res.status >= 500) && attempt < 6) {
+      const after = Number(res.headers.get('retry-after')) || 2 ** (attempt + 1)
+      console.log(`  (${new URL(url).host} asked us to slow down (${res.status}); waiting ${after}s)`)
+      await sleep(after * 1000)
+      continue
+    }
+    return res
+  }
+}
+
 async function api(params) {
-  const url = `${API}?${new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params })}`
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const url = `${API}?${new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', maxlag: '5', ...params })}`
+  const res = await politeFetch(url)
   if (!res.ok) throw new Error(`Commons API ${res.status}`)
   return res.json()
 }
@@ -39,8 +63,9 @@ const toInfo = (page) => {
   const meta = ii.extmetadata ?? {}
   return {
     title: page.title,
-    width: ii.width, height: ii.height, mime: ii.mime,
+    width: ii.width, height: ii.height, mime: ii.mime, bytes: ii.size,
     thumb: ii.thumburl ?? ii.url,
+    original: ii.url,
     licence: strip(meta.LicenseShortName?.value) || '',
     author: strip(meta.Artist?.value) || 'Unknown',
     source: ii.descriptionurl ?? `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`,
@@ -48,9 +73,13 @@ const toInfo = (page) => {
 }
 const usable = (i, [w]) => i && /jpeg|png|webp/.test(i.mime) && i.width >= w * 0.9 && FREE.test(i.licence) && !/nonfree|fair use/i.test(i.licence)
 
-const IMAGE_PROPS = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '1400' }
+// 960 px is one of Wikimedia's standard thumbnail sizes, so it's usually already
+// cached; unusual sizes have to be rendered and are heavily rate-limited.
+const IMAGE_PROPS = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '960' }
 
-async function search(entry, limit = 4) {
+const PER_PHOTO = Number(process.env.PHOTO_CANDIDATES ?? 3)
+
+async function search(entry, limit = PER_PHOTO) {
   const found = []
   for (const q of entry.queries) {
     const data = await api({ action: 'query', generator: 'search', gsrsearch: `${q} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '20', ...IMAGE_PROPS })
@@ -72,8 +101,15 @@ async function fileInfo(title) {
   return info
 }
 
+/**
+ * The image to resize: the original file when it's a reasonable size. Rarely
+ * viewed photos don't have thumbnails yet, and Wikimedia strictly limits how
+ * many it renders per visitor, while original files are just served.
+ */
+const sourceUrl = (info) => (info.original && info.bytes && info.bytes <= 12_000_000 ? info.original : info.thumb)
+
 async function download(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const res = await politeFetch(url)
   if (!res.ok) throw new Error(`download ${res.status} ${url}`)
   return Buffer.from(await res.arrayBuffer())
 }
@@ -88,30 +124,38 @@ function credit(path, info) {
   writeFileSync(creditsPath, `${text}\n| ${file} | ${info.author.replace(/\|/g, '/')} | ${info.licence} | ${info.source} |\n`)
 }
 
-async function save(entry, info) {
+async function save(entry, info, preview) {
   const out = `${ROOT}public/images/${entry.path}`
   mkdirSync(dirname(out), { recursive: true })
   const [w, h] = entry.size
-  await sharp(await download(info.thumb)).resize(w, h, { fit: 'cover', position: 'attention' }).webp({ quality: 78 }).toFile(out)
+  // A candidate's preview is already cropped to size, so reuse it rather than download again.
+  const source = preview && existsSync(preview) ? readFileSync(preview) : await download(sourceUrl(info))
+  await sharp(source).resize(w, h, { fit: 'cover', position: 'attention' }).webp({ quality: 80 }).toFile(out)
   credit(entry.path, info)
   console.log(`✓ ${entry.path}  ←  ${info.title} (${info.licence}, ${info.author})`)
 }
 
-const entries = manifest.photos.filter((e) => !only || e.path === only)
+const entries = manifest.photos
+  .filter((e) => !only || e.path === only)
+  .filter((e) => !flag('missing') || !existsSync(`${ROOT}public/images/${e.path}`))
 
 if (flag('candidates')) {
   mkdirSync(CANDIDATES, { recursive: true })
-  const all = {}
+  // Saved after each photo, so a run that's stopped carries on where it left off.
+  const saved = `${CANDIDATES}/candidates.json`
+  const all = existsSync(saved) ? JSON.parse(readFileSync(saved, 'utf8')) : {}
   for (const e of entries) {
+    if (e.file) continue // already chosen
+    if (all[e.path]?.length) { console.log(`${e.path}: already have ${all[e.path].length} candidates`); continue }
     const list = await search(e)
     all[e.path] = list
     for (const [n, info] of list.entries()) {
       const file = `${CANDIDATES}/${e.path.replace(/[/.]/g, '_')}-${n + 1}.jpg`
-      await sharp(await download(info.thumb)).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 80 }).toFile(file)
+      await sharp(await download(sourceUrl(info))).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 90 }).toFile(file)
     }
     console.log(`${e.path}: ${list.length ? list.map((c, n) => `\n  ${n + 1}. ${c.title} · ${c.licence} · ${c.author}`).join('') : ' no free-licence results; try other queries'}`)
+    writeFileSync(saved, JSON.stringify(all, null, 2))
   }
-  writeFileSync(`${CANDIDATES}/candidates.json`, JSON.stringify(all, null, 2))
   console.log(`\nCandidates are in .photo-candidates/. Choose with: npm run photos:fetch -- --pick <path>=<number>`)
 } else if (Object.keys(picks).length) {
   const all = JSON.parse(readFileSync(`${CANDIDATES}/candidates.json`, 'utf8'))
@@ -119,7 +163,7 @@ if (flag('candidates')) {
     const entry = manifest.photos.find((e) => e.path === path)
     const info = all[path]?.[n - 1]
     if (!entry || !info) throw new Error(`No candidate ${n} for ${path}; run --candidates first`)
-    await save(entry, info)
+    await save(entry, info, `${CANDIDATES}/${path.replace(/[/.]/g, '_')}-${n}.jpg`)
   }
 } else {
   const pinned = entries.filter((e) => e.file)

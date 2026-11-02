@@ -17,6 +17,9 @@ const str = (v: unknown, d = '') => (typeof v === 'string' ? v : d)
 const num = (v: unknown, d: number) => (typeof v === 'string' && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : d)
 const bool = (v: unknown) => v === '1'
 
+// Near me defaults to within 10 km; other locations to any distance.
+const defaultRadius = (source = location.value.source) => (source === 'device' ? 10 : 0)
+
 const filters = reactive<SearchFilters>({
   q: str(route.query.q),
   category: str(route.query.category) as CategoryId | '',
@@ -25,7 +28,7 @@ const filters = reactive<SearchFilters>({
   verifiedOnly: true,
   delivery: bool(route.query.delivery),
   pickup: bool(route.query.pickup),
-  radiusKm: num(route.query.radius, 0),
+  radiusKm: num(route.query.radius, defaultRadius()),
   sort: (str(route.query.sort, 'nearest') as SortKey),
 })
 
@@ -42,12 +45,17 @@ function syncQuery(f: SearchFilters) {
   if (f.openNow) query.open = '1'
   if (f.delivery) query.delivery = '1'
   if (f.pickup) query.pickup = '1'
-  if (f.radiusKm) query.radius = String(f.radiusKm)
+  if (f.radiusKm !== defaultRadius()) query.radius = String(f.radiusKm)
   if (f.sort !== 'nearest') query.sort = f.sort
   router.replace({ query })
 }
 watch(filters, syncQuery, { deep: true })
 watch(place, () => syncQuery(filters))
+// When the location changes (including the saved one loading), move to the new
+// default distance, unless the shopper picked a distance themselves.
+watch(() => location.value.source, (source, previous) => {
+  if (filters.radiusKm === defaultRadius(previous)) filters.radiusKm = defaultRadius(source)
+})
 
 const debouncedQ = ref(filters.q)
 let qTimer: ReturnType<typeof setTimeout> | undefined
@@ -127,10 +135,15 @@ function onSelect(id: string) {
   }
 }
 
-const hasFilters = computed(() => !!(filters.q || filters.category || filters.minRating || filters.openNow || filters.delivery || filters.pickup))
+/** Filters the shopper turned on (not the search text or location). */
+const activeFilters = computed(() => [
+  filters.category, filters.minRating, filters.openNow, filters.delivery, filters.pickup, !anywhere.value && filters.radiusKm !== defaultRadius(),
+].filter(Boolean).length)
+const hasFilters = computed(() => !!filters.q || activeFilters.value > 0)
 
-function clearFilters() {
-  Object.assign(filters, { q: '', category: '', minRating: 0, openNow: false, delivery: false, pickup: false, radiusKm: 0 })
+/** Turn off every filter (and, from the empty results screen, the search text too). Keeps the location. */
+function clearFilters(opts: { text?: boolean } = {}) {
+  Object.assign(filters, { category: '', minRating: 0, openNow: false, delivery: false, pickup: false, radiusKm: defaultRadius(), ...(opts.text ? { q: '' } : {}) })
 }
 
 useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
@@ -157,6 +170,14 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
 
         <div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 lg:mx-0 lg:flex-wrap lg:px-0">
           <LocationButton variant="chip" />
+          <button
+            v-if="activeFilters"
+            type="button"
+            class="flex h-10 shrink-0 border-[1.5px] border-danger-line bg-surface lg:order-last lg:border-transparent lg:bg-transparent cursor-pointer items-center gap-1 whitespace-nowrap rounded-full px-3 text-sm font-bold text-danger-ink hover:bg-danger-tint"
+            @click="clearFilters()"
+          >
+            <AppIcon name="x" :size="16" />Clear filters{{ activeFilters > 1 ? ` (${activeFilters})` : '' }}
+          </button>
           <FilterSelect v-if="!anywhere" id="f-radius" v-model="filters.radiusKm" label="Distance" :options="radiusOptions" :active="filters.radiusKm > 0" />
           <FilterSelect id="f-rating" v-model="filters.minRating" label="Rating" :options="ratingOptions" :active="filters.minRating > 0" />
           <FilterSelect id="f-cat" v-model="filters.category" label="Category" :options="categoryOptions" :active="!!filters.category" />
@@ -201,7 +222,7 @@ useSeoMeta({ title: () => `${heading.value.title} · Kusa` })
           <p v-if="place && !hasFilters" class="max-w-[320px] text-[15px] text-ink-2">No businesses in {{ placeLabel(place) }} on Kusa yet. Try another {{ place.city ? 'city' : 'state' }}, or see all of Nigeria.</p>
           <p v-else class="max-w-[300px] text-[15px] text-ink-2">No businesses match these filters {{ anywhere ? 'yet' : 'here yet' }}. Try {{ anywhere ? 'fewer filters' : 'a wider distance, another area or fewer filters' }}.</p>
           <button v-if="place && !hasFilters" type="button" class="btn-outline" @click="browseAnywhere()">See all of Nigeria</button>
-          <button v-else type="button" class="btn-outline" @click="clearFilters">Clear filters</button>
+          <button v-else type="button" class="btn-outline" @click="clearFilters({ text: true })">Clear filters</button>
         </div>
         <div v-else class="flex flex-col lg:gap-1">
           <PromoSlot v-for="v in promoted?.featured" :key="v.promotionId" :promotion-id="v.promotionId" class="border-t border-line first:border-t-0 lg:border-t-0">

@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { CATEGORIES } from '#shared/utils/catalog'
 
 const Body = z.object({
   kind: z.enum(['featured', 'banner', 'product']),
@@ -10,7 +9,7 @@ const Body = z.object({
   imageKey: z.string().max(200).optional(),
   linkUrl: z.string().trim().max(300).refine((u) => /^https:\/\/\S+$/.test(u) || /^\/[\w\-/?=&.%]*$/.test(u), 'Use an https:// link or an in-app path like /vendor/signup').optional(),
   city: z.string().trim().min(1).max(60).nullable(),
-  category: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]).nullable(),
+  category: CategoryField.nullable(),
   durationDays: z.number().int().min(1).max(365),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   price: z.number().int().min(0).max(100_000_000),

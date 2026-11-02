@@ -22,3 +22,4 @@ Demo cover photos from Wikimedia Commons, resized and converted to WebP.
 | lekki-cakes-by-tolu.webp | Shisma | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Banana_bread_slices.jpg |
 | wuse-kilishi-and-suya.webp | Zarerh | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Chicken_Grills_(Suya)_in_Northern_Nigeria_(8).jpg |
 | zaria-beads-and-crafts.webp | Amuzujoe | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Beads_Waist_0s.jpg |
+| kofar-mata-adire-and-dye.webp | Shots by abdul | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Kofar_mata_dye_pit_1.jpg |

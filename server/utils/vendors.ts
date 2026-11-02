@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import type { CategoryId, Product, RatingSummary, SearchFilters, Vendor, VendorWithMeta } from '#shared/types'
 import type { LatLng } from '#shared/types/api'
-import { CATEGORIES, haversineKm, initialsOf, lagosNow, openStateFor } from '#shared/utils/catalog'
+import { categoriesMatching, haversineKm, initialsOf, lagosNow, openStateFor } from '#shared/utils/catalog'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import type { ProductRow, VendorRow } from '../database/schema'
 
@@ -147,7 +147,7 @@ export async function searchVendors(
   const q = f.q.trim()
   if (q) {
     const like = `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%`
-    const catIds = CATEGORIES.filter((c) => c.label.toLowerCase().includes(q.toLowerCase())).map((c) => c.id)
+    const catIds = categoriesMatching(q)
     where.push(or(
       ilike(vendors.name, like),
       ilike(vendors.area, like),

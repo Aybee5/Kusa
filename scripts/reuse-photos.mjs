@@ -12,7 +12,7 @@ const credits = Object.fromEntries(readFileSync(img('products/CREDITS.md'), 'utf
 
 const jobs = {
   categories: [
-    ['small-chops', 'small-chops-party-pack'], ['snacks', 'chin-chin-jar-1-litre'], ['quick-meals', 'beef-suya-1-portion'],
+    ['small-chops', 'small-chops-party-pack'], ['quick-meals', 'beef-suya-1-portion'],
     ['drinks', 'zobo-1-litre'], ['cakes', 'red-velvet-cupcakes-6'], ['jewellery', 'bridal-bead-set', 'centre'],
     ['fashion', 'leather-slides'], ['beauty', 'bridal-henna-both-hands'],
   ],

@@ -1,15 +1,31 @@
 import type { Category, CategoryId, OpeningHours, OpenState, RatingSummary } from '../types'
 
 export const CATEGORIES: Category[] = [
-  { id: 'small-chops', label: 'Small chops', tint: '#F6E3C8', dot: '#C7832C' },
-  { id: 'snacks', label: 'Snacks', tint: '#F4ECC4', dot: '#B5961E' },
-  { id: 'quick-meals', label: 'Quick meals', tint: '#F3D6CC', dot: '#B85A3E' },
-  { id: 'drinks', label: 'Drinks', tint: '#F1D3DA', dot: '#B04A63' },
-  { id: 'cakes', label: 'Cakes & pastries', tint: '#FBE7D9', dot: '#CF7A45' },
-  { id: 'jewellery', label: 'Jewellery', tint: '#E4E1F2', dot: '#6A5FB0' },
-  { id: 'fashion', label: 'Fashion', tint: '#D9EBE6', dot: '#2E7C6B' },
-  { id: 'beauty', label: 'Beauty', tint: '#EFE0EC', dot: '#9A4F8C' },
+  { id: 'small-chops', label: 'Small chops & snacks', tint: '#F6E3C8', dot: '#C7832C',
+    keywords: ['small chops', 'snacks', 'puff puff', 'samosa', 'spring roll', 'chin chin', 'plantain chips', 'meat pie', 'gizzard', 'coconut candy'] },
+  { id: 'quick-meals', label: 'Quick meals', tint: '#F3D6CC', dot: '#B85A3E', keywords: ['food', 'suya', 'kilishi', 'jollof', 'asun', 'shawarma', 'rice'] },
+  { id: 'drinks', label: 'Drinks', tint: '#F1D3DA', dot: '#B04A63', keywords: ['zobo', 'kunu', 'tiger nut', 'juice', 'smoothie', 'fura'] },
+  { id: 'cakes', label: 'Cakes & pastries', tint: '#FBE7D9', dot: '#CF7A45', keywords: ['cake', 'cupcake', 'bread', 'pastry', 'doughnut', 'chin chin'] },
+  { id: 'fashion', label: 'Fashion', tint: '#D9EBE6', dot: '#2E7C6B',
+    keywords: ['clothes', 'clothing', 'abaya', 'jalabiya', 'kaftan', 'hijab', 'ankara', 'agbada', 'senator', 'babban riga', 'kaba', 'gown', 'aso oke', 'lace',
+      'atampa', 'boubou', 'shoes', 'sneakers', 'slides', 'sandals', 'bags', 'caps', 'hula', 'watches'] },
+  { id: 'jewellery', label: 'Jewellery', tint: '#E4E1F2', dot: '#6A5FB0', keywords: ['beads', 'waist beads', 'necklace', 'earrings', 'bracelet', 'gold'] },
+  { id: 'beauty', label: 'Beauty', tint: '#EFE0EC', dot: '#9A4F8C', keywords: ['henna', 'lalle', 'makeup', 'hair', 'braids', 'nails', 'skincare', 'perfume', 'turare'] },
+  { id: 'arts', label: 'Arts & handicraft', tint: '#EDE3D3', dot: '#8A6A3B',
+    keywords: ['art', 'arts', 'craft', 'crafts', 'handicraft', 'handmade', 'painting', 'adire', 'tie dye', 'dye', 'leather work', 'leatherwork', 'calabash',
+      'pottery', 'wood carving', 'carving', 'basket', 'weaving', 'embroidery', 'pouf', 'decor'] },
 ]
+
+/** Old category ids that were merged into others. */
+const CATEGORY_ALIASES: Record<string, CategoryId> = { snacks: 'small-chops', clothing: 'fashion' }
+export const canonicalCategory = (id: string) => CATEGORY_ALIASES[id] ?? id
+
+/** Categories a search term points to: "abaya" → Clothing, "snacks" → Small chops & snacks. */
+export function categoriesMatching(q: string): CategoryId[] {
+  const t = q.trim().toLowerCase()
+  if (t.length < 3) return []
+  return CATEGORIES.filter((c) => c.label.toLowerCase().includes(t) || c.keywords.some((k) => k.includes(t) || t.includes(k))).map((c) => c.id)
+}
 
 export function categoryLabel(id: CategoryId | string): string {
   return CATEGORIES.find((c) => c.id === id)?.label ?? id
@@ -20,7 +36,7 @@ export function reviewTagsFor(category: CategoryId): string[] {
   const food = ['Tasty', 'On time', 'Good packaging', 'Fair price', 'Friendly', 'Quick replies']
   const goods = ['Good quality', 'As pictured', 'On time', 'Fair price', 'Friendly', 'Quick replies']
   const service = ['Skilled', 'On time', 'Clean', 'Fair price', 'Friendly', 'Quick replies']
-  if (['small-chops', 'snacks', 'quick-meals', 'drinks', 'cakes'].includes(category)) return food
+  if (['small-chops', 'quick-meals', 'drinks', 'cakes'].includes(category)) return food
   if (category === 'beauty') return service
   return goods
 }

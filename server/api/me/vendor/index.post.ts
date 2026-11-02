@@ -5,7 +5,7 @@ import { guessState, STATE_NAMES } from '#shared/utils/states'
 
 const Body = z.object({
   name: z.string().trim().min(2).max(80),
-  category: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]),
+  category: CategoryField,
   ...ContactFields,
   area: z.string().trim().min(2, 'Enter your area or neighbourhood').max(60),
   city: z.string().trim().min(2).max(60).default('Kano'),

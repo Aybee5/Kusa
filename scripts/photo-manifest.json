@@ -1,17 +1,330 @@
 {
   "_about": "Photos to fetch from Wikimedia Commons with `npm run photos:fetch`. Each entry: target file, size, search queries tried in order, and optionally a pinned Commons file (\"File:Name.jpg\") to use instead of searching.",
   "photos": [
-    { "path": "categories/small-chops.webp", "size": [480, 360], "queries": ["small chops Nigeria", "puff puff"] },
-    { "path": "categories/snacks.webp", "size": [480, 360], "queries": ["chin chin snack", "plantain chips"] },
-    { "path": "categories/quick-meals.webp", "size": [480, 360], "queries": ["jollof rice", "suya"] },
-    { "path": "categories/drinks.webp", "size": [480, 360], "queries": ["zobo drink", "kunu drink"] },
-    { "path": "categories/cakes.webp", "size": [480, 360], "queries": ["birthday cake", "cake decorated"] },
-    { "path": "categories/jewellery.webp", "size": [480, 360], "queries": ["Nigerian beads jewellery", "beaded necklace Africa"] },
-    { "path": "categories/fashion.webp", "size": [480, 360], "queries": ["Ankara fashion Nigeria", "Ankara fabric"] },
-    { "path": "categories/beauty.webp", "size": [480, 360], "queries": ["henna hand design", "lalle henna"] },
-    { "path": "vendors/eko-small-chops-hub.webp", "size": [960, 640], "queries": ["small chops platter", "Nigerian party food"] },
-    { "path": "vendors/lekki-cakes-by-tolu.webp", "size": [960, 640], "queries": ["cake shop display", "bakery cakes display"] },
-    { "path": "vendors/wuse-kilishi-and-suya.webp", "size": [960, 640], "queries": ["kilishi", "suya grill Nigeria"] },
-    { "path": "vendors/zaria-beads-and-crafts.webp", "size": [960, 640], "queries": ["beads market Nigeria", "bead making Africa"] }
+    {
+      "path": "categories/small-chops.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "small chops Nigeria",
+        "chin chin snack"
+      ]
+    },
+    {
+      "path": "categories/quick-meals.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "jollof rice",
+        "suya"
+      ]
+    },
+    {
+      "path": "categories/drinks.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "zobo drink",
+        "kunu drink"
+      ]
+    },
+    {
+      "path": "categories/cakes.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "birthday cake",
+        "cake decorated"
+      ]
+    },
+    {
+      "path": "categories/jewellery.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "Nigerian beads jewellery",
+        "beaded necklace Africa"
+      ]
+    },
+    {
+      "path": "categories/fashion.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "abaya",
+        "Ankara fashion Nigeria",
+        "kaftan Nigeria"
+      ]
+    },
+    {
+      "path": "categories/beauty.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "henna hand design",
+        "lalle henna"
+      ]
+    },
+    {
+      "path": "vendors/eko-small-chops-hub.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "small chops platter",
+        "Nigerian party food"
+      ]
+    },
+    {
+      "path": "categories/arts.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "Kofar Mata dye pits",
+        "calabash carving",
+        "Nigerian handicraft"
+      ],
+      "file": "File:Kofar mata dye pit 3.jpg"
+    },
+    {
+      "path": "vendors/lekki-cakes-by-tolu.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "cake shop display",
+        "bakery cakes display"
+      ]
+    },
+    {
+      "path": "vendors/wuse-kilishi-and-suya.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "kilishi",
+        "suya grill Nigeria"
+      ]
+    },
+    {
+      "path": "vendors/zaria-beads-and-crafts.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "beads market Nigeria",
+        "bead making Africa"
+      ]
+    },
+    {
+      "path": "vendors/zahra-abaya-house.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "abaya shop",
+        "abayas display"
+      ]
+    },
+    {
+      "path": "vendors/sadiq-kaftan-and-babban-riga.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "babban riga",
+        "kaftan Nigeria men"
+      ]
+    },
+    {
+      "path": "vendors/surulere-ankara-studio.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "Ankara fabric market",
+        "Ankara tailoring"
+      ]
+    },
+    {
+      "path": "vendors/kofar-mata-adire-and-dye.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "Kofar Mata dye pits",
+        "indigo dyeing Nigeria",
+        "adire"
+      ],
+      "file": "File:Kofar mata dye pit 1.jpg"
+    },
+    {
+      "path": "vendors/kurmi-leather-and-calabash-crafts.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "Kurmi market Kano",
+        "Kano leather craft",
+        "calabash crafts"
+      ]
+    },
+    {
+      "path": "products/abaya-black-chiffon.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "black abaya",
+        "abaya"
+      ]
+    },
+    {
+      "path": "products/jalabiya-embroidered.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "jalabiya",
+        "embroidered kaftan dress"
+      ]
+    },
+    {
+      "path": "products/hijab-set-3-pieces.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "hijab scarves",
+        "hijabs"
+      ]
+    },
+    {
+      "path": "products/kaftan-sewn-to-measure.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "kaftan Nigeria men",
+        "Hausa kaftan"
+      ]
+    },
+    {
+      "path": "products/babban-riga-full-set.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "babban riga",
+        "Hausa traditional attire"
+      ]
+    },
+    {
+      "path": "products/ankara-gown-made-to-measure.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "Ankara dress",
+        "Ankara gown"
+      ]
+    },
+    {
+      "path": "products/ankara-two-piece-set.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "Ankara fabric outfit",
+        "Ankara skirt and blouse"
+      ]
+    },
+    {
+      "path": "products/adire-fabric-2-yards.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "adire fabric",
+        "adire cloth"
+      ]
+    },
+    {
+      "path": "products/indigo-tie-dye-scarf.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "indigo tie-dye",
+        "tie-dye fabric Nigeria"
+      ]
+    },
+    {
+      "path": "products/leather-pouf-handmade.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "leather pouf",
+        "Moroccan pouf leather"
+      ]
+    },
+    {
+      "path": "products/carved-calabash-bowl.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "carved calabash",
+        "calabash bowl"
+      ]
+    },
+    {
+      "path": "products/leather-wallet-handmade.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "handmade leather wallet",
+        "leather wallet"
+      ]
+    }
   ]
 }

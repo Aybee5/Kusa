@@ -1,6 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { CATEGORIES } from '#shared/utils/catalog'
 
 const Body = z.object({
   kind: z.enum(['featured', 'banner', 'product']),
@@ -8,7 +7,7 @@ const Body = z.object({
   headline: z.string().trim().max(60).optional(),
   imageKey: z.string().max(200).optional(),
   city: z.string().trim().min(1).max(60).nullable(),
-  category: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]).nullable(),
+  category: CategoryField.nullable(),
   durationDays: z.number().int(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   paymentRef: z.string().trim().max(80).optional(),
