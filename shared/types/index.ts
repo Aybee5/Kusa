@@ -3,10 +3,10 @@ export type CategoryId =
   | 'quick-meals'
   | 'drinks'
   | 'cakes'
-  | 'clothing'
   | 'fashion'
   | 'jewellery'
   | 'beauty'
+  | 'arts'
 
 export interface Category {
   id: CategoryId

@@ -46,18 +46,6 @@
       ]
     },
     {
-      "path": "categories/clothing.webp",
-      "size": [
-        480,
-        360
-      ],
-      "queries": [
-        "abaya",
-        "kaftan Nigeria",
-        "Ankara dress"
-      ]
-    },
-    {
       "path": "categories/jewellery.webp",
       "size": [
         480,
@@ -75,8 +63,9 @@
         360
       ],
       "queries": [
+        "abaya",
         "Ankara fashion Nigeria",
-        "Ankara fabric"
+        "kaftan Nigeria"
       ]
     },
     {
@@ -99,6 +88,18 @@
       "queries": [
         "small chops platter",
         "Nigerian party food"
+      ]
+    },
+    {
+      "path": "categories/arts.webp",
+      "size": [
+        480,
+        360
+      ],
+      "queries": [
+        "Kofar Mata dye pits",
+        "calabash carving",
+        "Nigerian handicraft"
       ]
     },
     {
@@ -165,6 +166,30 @@
       "queries": [
         "Ankara fabric market",
         "Ankara tailoring"
+      ]
+    },
+    {
+      "path": "vendors/kofar-mata-adire-and-dye.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "Kofar Mata dye pits",
+        "indigo dyeing Nigeria",
+        "adire"
+      ]
+    },
+    {
+      "path": "vendors/kurmi-leather-and-calabash-crafts.webp",
+      "size": [
+        960,
+        640
+      ],
+      "queries": [
+        "Kurmi market Kano",
+        "Kano leather craft",
+        "calabash crafts"
       ]
     }
   ]

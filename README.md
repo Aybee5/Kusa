@@ -1,6 +1,6 @@
 # Kusa
 
-Find small businesses near you: small chops and snacks, cakes, clothing (abaya, kaftan, ankara…), shoes, jewellery, beauty and more. Vendors register, get verified by hand and list their products. Shoppers search by location, category and rating, then reach the vendor on WhatsApp or by phone. Admins verify vendors, moderate reviews and manage shoppers.
+Find small businesses near you: small chops and snacks, cakes, fashion (abaya, kaftan, ankara, shoes…), jewellery, beauty, arts and handicraft, and more. Vendors register, get verified by hand and list their products. Shoppers search by location, category and rating, then reach the vendor on WhatsApp or by phone. Admins verify vendors, moderate reviews and manage shoppers.
 
 One codebase, three things:
 
@@ -112,7 +112,7 @@ Until they choose, results are sorted from a default area (central Kano), labell
 
 Every business has a state (one of the 36 or FCT), suggested from its map pin at sign-up and editable in My shop; city and area are typed. Vendors mark their shop by tapping the map or dragging a pin; sharing their phone's location is optional. Existing businesses got their state from their city name, or the nearest state capital to their pin (migration `0005_vendor_state.sql`).
 
-**Categories.** Small chops & snacks, Quick meals, Drinks, Cakes & pastries, Clothing, Shoes & accessories, Jewellery and Beauty (`shared/utils/catalog.ts`). Each has search keywords, so searching "abaya", "kaftan" or "ankara" finds clothing businesses even when the word isn't in their name. "Snacks" was merged into "Small chops & snacks" (migration `0006_merge_snacks.sql`); old `category=snacks` links still work.
+**Categories.** Small chops & snacks, Quick meals, Drinks, Cakes & pastries, Fashion, Jewellery, Beauty, and Arts & handicraft (`shared/utils/catalog.ts`), one tile each on the home page. Each has search keywords, so searching "abaya", "kaftan" or "ankara" finds Fashion businesses and "adire", "calabash" or "leather work" finds Arts & handicraft, even when the word isn't in their name. "Snacks" was merged into "Small chops & snacks" (migration `0006_merge_snacks.sql`); old `category=snacks` and `category=clothing` links still work.
 
 **Search.** Every filter (distance, category, rating, open now, delivery, pickup, text) and both sorts run in the database, so the 100 results returned are always the right 100.
 

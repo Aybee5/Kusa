@@ -152,24 +152,38 @@ vendors.push(
   },
   {
     id: 'v19', slug: 'zahra-abaya-house', name: 'Zahra Abaya House', ownerName: 'Zahra Muhammad',
-    phone: '+2348170000105', whatsapp: '2348170000105', category: 'clothing', area: 'Kofar Wambai', city: 'Kano', state: 'Kano',
+    phone: '+2348170000105', whatsapp: '2348170000105', category: 'fashion', area: 'Kofar Wambai', city: 'Kano', state: 'Kano',
     ...at(0.7, -1.6), status: 'verified', hours: hours('09:00', '18:00', [5]), delivery: true, pickup: true,
     initials: 'ZA', tint: '#DCE5F3', coverTint: '#DCE5F3', joinedAt: '2026-10-12', instagram: 'zahraabayahouse',
     about: 'Abayas, jalabiyas and hijab sets in chiffon, crepe and silk. Sizes S to 3XL; custom lengths in three days.', documents: docs(),
   },
   {
     id: 'v20', slug: 'sadiq-kaftan-and-babban-riga', name: 'Sadiq Kaftan & Babban Riga', ownerName: 'Sadiq Lawan',
-    phone: '+2348170000106', whatsapp: '2348170000106', category: 'clothing', area: 'Fagge', city: 'Kano', state: 'Kano',
+    phone: '+2348170000106', whatsapp: '2348170000106', category: 'fashion', area: 'Fagge', city: 'Kano', state: 'Kano',
     ...at(1.6, 0.2), status: 'verified', hours: hours('10:00', '19:00', [5]), delivery: true, pickup: true,
     initials: 'SK', tint: '#E3E8EE', coverTint: '#E3E8EE', joinedAt: '2026-10-14',
     about: 'Men’s kaftans, babban riga and caps, sewn to measure. Bring your own fabric or choose from ours.', documents: docs(),
   },
   {
     id: 'v21', slug: 'surulere-ankara-studio', name: 'Surulere Ankara Studio', ownerName: 'Funke Adebayo',
-    phone: '+2348170000107', whatsapp: '2348170000107', category: 'clothing', area: 'Surulere', city: 'Lagos', state: 'Lagos',
+    phone: '+2348170000107', whatsapp: '2348170000107', category: 'fashion', area: 'Surulere', city: 'Lagos', state: 'Lagos',
     lat: 6.4969, lng: 3.354, status: 'verified', hours: hours('09:00', '19:00', [0]), delivery: true, pickup: true,
     initials: 'SA', tint: '#F6E0D2', coverTint: '#F6E0D2', joinedAt: '2026-10-16', instagram: 'surulereankara', primaryContact: 'instagram',
     about: 'Ankara gowns, two-piece sets and aso-ebi for owambe, made to measure in a week.', documents: docs(),
+  },
+  {
+    id: 'v22', slug: 'kofar-mata-adire-and-dye', name: 'Kofar Mata Adire & Dye', ownerName: 'Bashir Musa',
+    phone: '+2348170000108', whatsapp: '2348170000108', category: 'arts', area: 'Kofar Mata', city: 'Kano', state: 'Kano',
+    ...at(1.3, -2.0), status: 'verified', hours: hours('08:00', '17:00', [5]), delivery: true, pickup: true,
+    initials: 'KM', tint: '#DDE3EF', coverTint: '#DDE3EF', joinedAt: '2026-10-18',
+    about: 'Indigo-dyed fabric and adire from the Kofar Mata dye pits, dyed by hand the way our family has for generations. Visits welcome.', documents: docs(),
+  },
+  {
+    id: 'v23', slug: 'kurmi-leather-and-calabash-crafts', name: 'Kurmi Leather & Calabash Crafts', ownerName: 'Aisha Garba',
+    phone: '+2348170000109', whatsapp: '2348170000109', category: 'arts', area: 'Kurmi Market', city: 'Kano', state: 'Kano',
+    ...at(1.0, -2.4), status: 'verified', hours: hours('09:00', '18:00', [5]), delivery: true, pickup: true,
+    initials: 'KL', tint: '#EDE3D3', coverTint: '#EDE3D3', joinedAt: '2026-10-20', instagram: 'kurmicrafts',
+    about: 'Handmade leather poufs, bags and wallets, carved calabashes and woven baskets from Kurmi market. We ship across Nigeria.', documents: docs(),
   },
 )
 
@@ -230,6 +244,12 @@ export const products: Product[] = [
   p('v20', 'Babban riga, full set', 65000, '#D9EBE6', 'Babban riga', 'Embroidered babban riga with kaftan, trousers and cap.'),
   p('v21', 'Ankara gown, made to measure', 25000, '#F6E0D2', 'Ankara gown', 'Your style and size; fabric included.'),
   p('v21', 'Ankara two-piece set', 18000, '#FBE7D9', 'Ankara set', 'Top and wrapper or trousers in matching ankara.'),
+  p('v22', 'Adire fabric, 2 yards', 9000, '#DDE3EF', 'Adire fabric', 'Hand-dyed indigo cotton; each piece is one of a kind.'),
+  p('v22', 'Indigo tie-dye scarf', 4500, '#E4E1F2', 'Tie-dye scarf', 'Light cotton scarf dyed at the Kofar Mata pits.'),
+  p('v23', 'Leather pouf, handmade', 35000, '#EDE3D3', 'Leather pouf', 'Embroidered Kano leather pouf, sent unstuffed or filled.',
+    { options: [{ label: 'Unstuffed', price: 35000 }, { label: 'Filled', price: 42000 }] }),
+  p('v23', 'Carved calabash bowl', 8000, '#F4ECC4', 'Calabash bowl', 'Hand-carved decorative calabash, about 30 cm across.'),
+  p('v23', 'Leather wallet, handmade', 7000, '#F6E3C8', 'Leather wallet', 'Hand-stitched goat leather wallet.'),
 ]
 
 /**
@@ -255,6 +275,8 @@ export const seedRatings: Record<string, [number, number, number, number, number
   v19: [34, 6, 1, 0, 0],
   v20: [21, 7, 2, 0, 1],
   v21: [17, 6, 2, 1, 0],
+  v22: [19, 5, 1, 0, 0],
+  v23: [24, 7, 1, 1, 0],
 }
 
 export const shoppers: Omit<Shopper, 'email'>[] = [

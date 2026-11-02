@@ -6,15 +6,18 @@ export const CATEGORIES: Category[] = [
   { id: 'quick-meals', label: 'Quick meals', tint: '#F3D6CC', dot: '#B85A3E', keywords: ['food', 'suya', 'kilishi', 'jollof', 'asun', 'shawarma', 'rice'] },
   { id: 'drinks', label: 'Drinks', tint: '#F1D3DA', dot: '#B04A63', keywords: ['zobo', 'kunu', 'tiger nut', 'juice', 'smoothie', 'fura'] },
   { id: 'cakes', label: 'Cakes & pastries', tint: '#FBE7D9', dot: '#CF7A45', keywords: ['cake', 'cupcake', 'bread', 'pastry', 'doughnut', 'chin chin'] },
-  { id: 'clothing', label: 'Clothing', tint: '#DCE5F3', dot: '#3D63A6',
-    keywords: ['clothes', 'abaya', 'jalabiya', 'kaftan', 'hijab', 'ankara', 'agbada', 'senator', 'babban riga', 'kaba', 'gown', 'aso oke', 'lace', 'atampa', 'boubou'] },
-  { id: 'fashion', label: 'Shoes & accessories', tint: '#D9EBE6', dot: '#2E7C6B', keywords: ['shoes', 'sneakers', 'slides', 'sandals', 'bags', 'caps', 'fashion', 'watches'] },
+  { id: 'fashion', label: 'Fashion', tint: '#D9EBE6', dot: '#2E7C6B',
+    keywords: ['clothes', 'clothing', 'abaya', 'jalabiya', 'kaftan', 'hijab', 'ankara', 'agbada', 'senator', 'babban riga', 'kaba', 'gown', 'aso oke', 'lace',
+      'atampa', 'boubou', 'shoes', 'sneakers', 'slides', 'sandals', 'bags', 'caps', 'hula', 'watches'] },
   { id: 'jewellery', label: 'Jewellery', tint: '#E4E1F2', dot: '#6A5FB0', keywords: ['beads', 'waist beads', 'necklace', 'earrings', 'bracelet', 'gold'] },
   { id: 'beauty', label: 'Beauty', tint: '#EFE0EC', dot: '#9A4F8C', keywords: ['henna', 'lalle', 'makeup', 'hair', 'braids', 'nails', 'skincare', 'perfume', 'turare'] },
+  { id: 'arts', label: 'Arts & handicraft', tint: '#EDE3D3', dot: '#8A6A3B',
+    keywords: ['art', 'arts', 'craft', 'crafts', 'handicraft', 'handmade', 'painting', 'adire', 'tie dye', 'dye', 'leather work', 'leatherwork', 'calabash',
+      'pottery', 'wood carving', 'carving', 'basket', 'weaving', 'embroidery', 'pouf', 'decor'] },
 ]
 
 /** Old category ids that were merged into others. */
-const CATEGORY_ALIASES: Record<string, CategoryId> = { snacks: 'small-chops' }
+const CATEGORY_ALIASES: Record<string, CategoryId> = { snacks: 'small-chops', clothing: 'fashion' }
 export const canonicalCategory = (id: string) => CATEGORY_ALIASES[id] ?? id
 
 /** Categories a search term points to: "abaya" → Clothing, "snacks" → Small chops & snacks. */
