@@ -5,6 +5,7 @@
 //   npm run photos:fetch -- --pick categories/drinks.webp=2 [more…]   use a candidate
 //   npm run photos:fetch                             fetch photos that have a pinned "file" in scripts/photo-manifest.json
 //   add --only <path> to limit to one photo, or --missing for photos whose file doesn't exist yet
+//   PHOTO_CANDIDATES=2 for fewer candidates; PHOTO_DOWNLOAD_GAP_MS=45000 to space downloads on strictly limited connections
 //
 // Needs internet access to commons.wikimedia.org and upload.wikimedia.org.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -27,13 +28,17 @@ const FREE = /^(cc0|cc[- ]by(-sa)?[- ][\d.]+|cc[- ]by(-sa)?|public domain|pd(-\w
 const strip = (html = '') => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-let last = 0
-/** One request at a time, a second apart, retrying politely when Wikimedia says to slow down. */
+// Gap between requests to each host. Image downloads can be spaced out further
+// with PHOTO_DOWNLOAD_GAP_MS on connections Wikimedia limits strictly (cloud servers).
+const GAP = { default: 1000, 'upload.wikimedia.org': Number(process.env.PHOTO_DOWNLOAD_GAP_MS ?? 1000) }
+const last = {}
+/** One request at a time, spaced out per host, retrying politely when Wikimedia says to slow down. */
 async function politeFetch(url) {
+  const host = new URL(url).host
   for (let attempt = 0; ; attempt++) {
-    const wait = last + 1000 - Date.now()
+    const wait = (last[host] ?? 0) + (GAP[host] ?? GAP.default) - Date.now()
     if (wait > 0) await sleep(wait)
-    last = Date.now()
+    last[host] = Date.now()
     const res = await fetch(url, { headers: { 'User-Agent': UA } })
     if ((res.status === 429 || res.status >= 500) && attempt < 6) {
       const after = Number(res.headers.get('retry-after')) || 2 ** (attempt + 1)
@@ -72,7 +77,9 @@ const usable = (i, [w]) => i && /jpeg|png|webp/.test(i.mime) && i.width >= w * 0
 // cached; unusual sizes have to be rendered and are heavily rate-limited.
 const IMAGE_PROPS = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '960' }
 
-async function search(entry, limit = 3) {
+const PER_PHOTO = Number(process.env.PHOTO_CANDIDATES ?? 3)
+
+async function search(entry, limit = PER_PHOTO) {
   const found = []
   for (const q of entry.queries) {
     const data = await api({ action: 'query', generator: 'search', gsrsearch: `${q} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '20', ...IMAGE_PROPS })
