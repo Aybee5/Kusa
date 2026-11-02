@@ -58,8 +58,9 @@ const toInfo = (page) => {
   const meta = ii.extmetadata ?? {}
   return {
     title: page.title,
-    width: ii.width, height: ii.height, mime: ii.mime,
+    width: ii.width, height: ii.height, mime: ii.mime, bytes: ii.size,
     thumb: ii.thumburl ?? ii.url,
+    original: ii.url,
     licence: strip(meta.LicenseShortName?.value) || '',
     author: strip(meta.Artist?.value) || 'Unknown',
     source: ii.descriptionurl ?? `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`,
@@ -93,6 +94,13 @@ async function fileInfo(title) {
   return info
 }
 
+/**
+ * The image to resize: the original file when it's a reasonable size. Rarely
+ * viewed photos don't have thumbnails yet, and Wikimedia strictly limits how
+ * many it renders per visitor, while original files are just served.
+ */
+const sourceUrl = (info) => (info.original && info.bytes && info.bytes <= 12_000_000 ? info.original : info.thumb)
+
 async function download(url) {
   const res = await politeFetch(url)
   if (!res.ok) throw new Error(`download ${res.status} ${url}`)
@@ -114,7 +122,7 @@ async function save(entry, info, preview) {
   mkdirSync(dirname(out), { recursive: true })
   const [w, h] = entry.size
   // A candidate's preview is already cropped to size, so reuse it rather than download again.
-  const source = preview && existsSync(preview) ? readFileSync(preview) : await download(info.thumb)
+  const source = preview && existsSync(preview) ? readFileSync(preview) : await download(sourceUrl(info))
   await sharp(source).resize(w, h, { fit: 'cover', position: 'attention' }).webp({ quality: 80 }).toFile(out)
   credit(entry.path, info)
   console.log(`✓ ${entry.path}  ←  ${info.title} (${info.licence}, ${info.author})`)
@@ -136,7 +144,7 @@ if (flag('candidates')) {
     all[e.path] = list
     for (const [n, info] of list.entries()) {
       const file = `${CANDIDATES}/${e.path.replace(/[/.]/g, '_')}-${n + 1}.jpg`
-      await sharp(await download(info.thumb)).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 90 }).toFile(file)
+      await sharp(await download(sourceUrl(info))).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 90 }).toFile(file)
     }
     console.log(`${e.path}: ${list.length ? list.map((c, n) => `\n  ${n + 1}. ${c.title} · ${c.licence} · ${c.author}`).join('') : ' no free-licence results; try other queries'}`)
     writeFileSync(saved, JSON.stringify(all, null, 2))
