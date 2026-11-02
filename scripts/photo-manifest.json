@@ -191,6 +191,138 @@
         "Kano leather craft",
         "calabash crafts"
       ]
+    },
+    {
+      "path": "products/abaya-black-chiffon.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "black abaya",
+        "abaya"
+      ]
+    },
+    {
+      "path": "products/jalabiya-embroidered.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "jalabiya",
+        "embroidered kaftan dress"
+      ]
+    },
+    {
+      "path": "products/hijab-set-3-pieces.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "hijab scarves",
+        "hijabs"
+      ]
+    },
+    {
+      "path": "products/kaftan-sewn-to-measure.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "kaftan Nigeria men",
+        "Hausa kaftan"
+      ]
+    },
+    {
+      "path": "products/babban-riga-full-set.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "babban riga",
+        "Hausa traditional attire"
+      ]
+    },
+    {
+      "path": "products/ankara-gown-made-to-measure.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "Ankara dress",
+        "Ankara gown"
+      ]
+    },
+    {
+      "path": "products/ankara-two-piece-set.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "Ankara fabric outfit",
+        "Ankara skirt and blouse"
+      ]
+    },
+    {
+      "path": "products/adire-fabric-2-yards.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "adire fabric",
+        "adire cloth"
+      ]
+    },
+    {
+      "path": "products/indigo-tie-dye-scarf.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "indigo tie-dye",
+        "tie-dye fabric Nigeria"
+      ]
+    },
+    {
+      "path": "products/leather-pouf-handmade.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "leather pouf",
+        "Moroccan pouf leather"
+      ]
+    },
+    {
+      "path": "products/carved-calabash-bowl.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "carved calabash",
+        "calabash bowl"
+      ]
+    },
+    {
+      "path": "products/leather-wallet-handmade.webp",
+      "size": [
+        900,
+        675
+      ],
+      "queries": [
+        "handmade leather wallet",
+        "leather wallet"
+      ]
     }
   ]
 }

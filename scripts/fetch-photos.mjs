@@ -4,7 +4,7 @@
 //   npm run photos:fetch -- --candidates            save up to 4 candidates per photo in .photo-candidates/ to look at
 //   npm run photos:fetch -- --pick categories/drinks.webp=2 [more…]   use a candidate
 //   npm run photos:fetch                             fetch photos that have a pinned "file" in scripts/photo-manifest.json
-//   add --only <path> to limit to one photo
+//   add --only <path> to limit to one photo, or --missing for photos whose file doesn't exist yet
 //
 // Needs internet access to commons.wikimedia.org and upload.wikimedia.org.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -26,9 +26,28 @@ const picks = Object.fromEntries(args.filter((a) => /\.webp=\d+$/.test(a)).map((
 const FREE = /^(cc0|cc[- ]by(-sa)?[- ][\d.]+|cc[- ]by(-sa)?|public domain|pd(-\w+)?)/i
 const strip = (html = '') => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+let last = 0
+/** One request at a time, a second apart, retrying politely when Wikimedia says to slow down. */
+async function politeFetch(url) {
+  for (let attempt = 0; ; attempt++) {
+    const wait = last + 1000 - Date.now()
+    if (wait > 0) await sleep(wait)
+    last = Date.now()
+    const res = await fetch(url, { headers: { 'User-Agent': UA } })
+    if ((res.status === 429 || res.status >= 500) && attempt < 6) {
+      const after = Number(res.headers.get('retry-after')) || 2 ** (attempt + 1)
+      console.log(`  (Wikimedia asked us to slow down; waiting ${after}s)`)
+      await sleep(after * 1000)
+      continue
+    }
+    return res
+  }
+}
+
 async function api(params) {
-  const url = `${API}?${new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params })}`
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const url = `${API}?${new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', maxlag: '5', ...params })}`
+  const res = await politeFetch(url)
   if (!res.ok) throw new Error(`Commons API ${res.status}`)
   return res.json()
 }
@@ -73,7 +92,7 @@ async function fileInfo(title) {
 }
 
 async function download(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const res = await politeFetch(url)
   if (!res.ok) throw new Error(`download ${res.status} ${url}`)
   return Buffer.from(await res.arrayBuffer())
 }
@@ -97,7 +116,9 @@ async function save(entry, info) {
   console.log(`✓ ${entry.path}  ←  ${info.title} (${info.licence}, ${info.author})`)
 }
 
-const entries = manifest.photos.filter((e) => !only || e.path === only)
+const entries = manifest.photos
+  .filter((e) => !only || e.path === only)
+  .filter((e) => !flag('missing') || !existsSync(`${ROOT}public/images/${e.path}`))
 
 if (flag('candidates')) {
   mkdirSync(CANDIDATES, { recursive: true })
