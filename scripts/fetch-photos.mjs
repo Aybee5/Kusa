@@ -37,7 +37,7 @@ async function politeFetch(url) {
     const res = await fetch(url, { headers: { 'User-Agent': UA } })
     if ((res.status === 429 || res.status >= 500) && attempt < 6) {
       const after = Number(res.headers.get('retry-after')) || 2 ** (attempt + 1)
-      console.log(`  (Wikimedia asked us to slow down; waiting ${after}s)`)
+      console.log(`  (${new URL(url).host} asked us to slow down (${res.status}); waiting ${after}s)`)
       await sleep(after * 1000)
       continue
     }
@@ -67,9 +67,11 @@ const toInfo = (page) => {
 }
 const usable = (i, [w]) => i && /jpeg|png|webp/.test(i.mime) && i.width >= w * 0.9 && FREE.test(i.licence) && !/nonfree|fair use/i.test(i.licence)
 
-const IMAGE_PROPS = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '1400' }
+// 960 px is one of Wikimedia's standard thumbnail sizes, so it's usually already
+// cached; unusual sizes have to be rendered and are heavily rate-limited.
+const IMAGE_PROPS = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '960' }
 
-async function search(entry, limit = 4) {
+async function search(entry, limit = 3) {
   const found = []
   for (const q of entry.queries) {
     const data = await api({ action: 'query', generator: 'search', gsrsearch: `${q} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '20', ...IMAGE_PROPS })
@@ -122,8 +124,12 @@ const entries = manifest.photos
 
 if (flag('candidates')) {
   mkdirSync(CANDIDATES, { recursive: true })
-  const all = {}
+  // Saved after each photo, so a run that's stopped carries on where it left off.
+  const saved = `${CANDIDATES}/candidates.json`
+  const all = existsSync(saved) ? JSON.parse(readFileSync(saved, 'utf8')) : {}
   for (const e of entries) {
+    if (e.file) continue // already chosen
+    if (all[e.path]?.length) { console.log(`${e.path}: already have ${all[e.path].length} candidates`); continue }
     const list = await search(e)
     all[e.path] = list
     for (const [n, info] of list.entries()) {
@@ -131,8 +137,8 @@ if (flag('candidates')) {
       await sharp(await download(info.thumb)).resize(e.size[0], e.size[1], { fit: 'cover', position: 'attention' }).jpeg({ quality: 80 }).toFile(file)
     }
     console.log(`${e.path}: ${list.length ? list.map((c, n) => `\n  ${n + 1}. ${c.title} · ${c.licence} · ${c.author}`).join('') : ' no free-licence results; try other queries'}`)
+    writeFileSync(saved, JSON.stringify(all, null, 2))
   }
-  writeFileSync(`${CANDIDATES}/candidates.json`, JSON.stringify(all, null, 2))
   console.log(`\nCandidates are in .photo-candidates/. Choose with: npm run photos:fetch -- --pick <path>=<number>`)
 } else if (Object.keys(picks).length) {
   const all = JSON.parse(readFileSync(`${CANDIDATES}/candidates.json`, 'utf8'))
