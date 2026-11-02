@@ -11,3 +11,4 @@ From Wikimedia Commons, resized, cropped and converted to WebP.
 | jewellery.webp | Stephanie cheks | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Igbo_Coral_Bead.jpg |
 | fashion.webp | Tmwatha | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:African_beaded_sandals.jpg |
 | beauty.webp | Goutam1962 | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Bridal_mehndi_(henna)_is_a_central_wedding_tradition_05.jpg |
+| arts.webp | Shots by abdul | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Kofar_mata_dye_pit_3.jpg |
