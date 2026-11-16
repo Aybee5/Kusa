@@ -55,6 +55,8 @@ jobs:
           GEO_SEARCH: postgis
           SEED_DEMO_DATA: "true"
           UPLOADS_DIR: ${{ runner.temp }}/uploads
+          # The API checks use made-up video links, so don't ask the platforms.
+          VIDEO_CHECKS: "off"
           PORT: "3000"
         run: |
           node .output/server/index.mjs > "$RUNNER_TEMP/server.log" 2>&1 &

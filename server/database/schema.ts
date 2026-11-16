@@ -208,8 +208,36 @@ export const promotionDailyStats = pgTable('promotion_daily_stats', {
   clicks: integer('clicks').notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.promotionId, t.day] })])
 
+/**
+ * Shop videos: links to the vendor's posts on TikTok, Instagram, YouTube or
+ * Facebook. Shoppers play them in the platform's own embed player; Kusa stores
+ * only the link. Status is re-checked with the platform about once a day
+ * (when the shop is viewed); unavailable videos are hidden from shoppers.
+ */
+export const vendorVideos = pgTable('vendor_videos', {
+  id: id(),
+  vendorId: text('vendor_id').notNull().references(() => vendors.id, { onDelete: 'cascade' }),
+  provider: text('provider', { enum: ['tiktok', 'instagram', 'youtube', 'facebook'] }).notNull(),
+  /** The platform's id for the post (Instagram: shortcode). */
+  externalId: text('external_id').notNull(),
+  url: text('url').notNull(),
+  title: text('title').notNull().default(''),
+  coverImageKey: text('cover_image_key'),
+  aspect: text('aspect', { enum: ['portrait', 'landscape'] }).notNull().default('portrait'),
+  position: integer('position').notNull().default(0),
+  status: text('status', { enum: ['active', 'unavailable'] }).notNull().default('active'),
+  checkedAt: timestamp('checked_at', { withTimezone: true }),
+  /** A shopper's player reported it couldn't play the video. */
+  problemReportedAt: timestamp('problem_reported_at', { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex('vendor_videos_post_idx').on(t.vendorId, t.provider, t.externalId),
+  index('vendor_videos_vendor_idx').on(t.vendorId, t.status, t.position),
+])
+
 export type UserRow = typeof users.$inferSelect
 export type VendorRow = typeof vendors.$inferSelect
 export type ProductRow = typeof products.$inferSelect
 export type ReviewRow = typeof reviews.$inferSelect
 export type PromotionRow = typeof promotions.$inferSelect
+export type VendorVideoRow = typeof vendorVideos.$inferSelect

@@ -8,6 +8,9 @@ defineProps<{ vendor: VendorWithMeta; sponsored?: boolean }>()
     <div class="relative">
       <PhotoBox :tint="vendor.coverTint" :src="vendor.coverImage" :alt="vendor.name" :label="categoryLabel(vendor.category)" class="h-28 lg:h-36" />
       <SponsoredTag v-if="sponsored" class="absolute left-2.5 top-2.5" />
+      <span v-if="vendor.videoCount" class="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/65 py-0.5 pl-1.5 pr-2 text-[11px] font-bold text-white">
+        <AppIcon name="play" :size="11" />{{ vendor.videoCount === 1 ? 'Video' : `${vendor.videoCount} videos` }}
+      </span>
     </div>
     <div class="flex flex-col gap-1 px-3.5 pb-3.5 pt-3">
       <div class="flex items-center gap-1.5 text-[15px] font-bold lg:text-base">

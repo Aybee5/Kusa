@@ -45,6 +45,14 @@ export function serverConfig() {
     payment: env.PAYMENT_ACCOUNT_NUMBER
       ? { bankName: env.PAYMENT_BANK_NAME ?? '', accountName: env.PAYMENT_ACCOUNT_NAME ?? '', accountNumber: env.PAYMENT_ACCOUNT_NUMBER }
       : null,
+    /**
+     * Check shop video links with the platforms (oEmbed) when added and about
+     * once a day after. "off" accepts any well-formed link (tests, offline dev).
+     */
+    videoChecks: (env.VIDEO_CHECKS === 'off' ? 'off' : 'on') as 'on' | 'off',
+    /** Optional Meta app token (app-id|client-token) for higher Instagram/Facebook oEmbed limits. */
+    metaOembedToken: env.META_OEMBED_TOKEN ?? '',
+    metaGraphVersion: env.META_GRAPH_VERSION ?? 'v25.0',
     /** Optional JSON to change promotion prices, e.g. {"featured":{"7":6000}} */
     promotionPrices: parseJson<Partial<Record<string, Record<string, number>>>>(env.PROMOTION_PRICES) ?? {},
   }

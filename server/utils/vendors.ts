@@ -84,8 +84,9 @@ async function productSummaries(vendorIds: string[]) {
 
 export async function withMeta(rows: VendorRow[], origin: LatLng | null): Promise<VendorWithMeta[]> {
   const ids = rows.map((r) => r.id)
-  const [prods, owners] = await Promise.all([
+  const [prods, videos, owners] = await Promise.all([
     productSummaries(ids),
+    videoCounts(ids),
     ids.length
       ? useDb().select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, rows.map((r) => r.ownerId)))
       : Promise.resolve([]),
@@ -98,6 +99,7 @@ export async function withMeta(rows: VendorRow[], origin: LatLng | null): Promis
     openState: openStateFor({ opens: r.opens, closes: r.closes, closedDays: r.closedDays }),
     productCount: prods.get(r.id)?.count ?? 0,
     fromPrice: prods.get(r.id)?.fromPrice ?? null,
+    videoCount: videos.get(r.id) ?? 0,
   }))
 }
 

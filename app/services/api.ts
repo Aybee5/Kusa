@@ -4,7 +4,7 @@ import type {
 import type {
   AdminPromotionInput, AdminReview, AdminShopper, AdminVendor, Area, AuthResult, CodeSent, LatLng, NewProductInput, NewPromotionInput,
   NewVendorInput, ProductUpdate, ProductWithVendor, Promoted, Promotion, PromotionPlans, PublicReview, SignInOptions, TrafficEvent,
-  TrafficSourceKey, UploadKind, UploadResult, VendorUpdate, VerificationInput,
+  TrafficSourceKey, UploadKind, UploadResult, VendorUpdate, VerificationInput, VendorVideo, MyVendorVideo, NewVideoInput, VideoUpdate,
 } from '#shared/types/api'
 
 /** Who a sign-in code goes to. */
@@ -26,6 +26,9 @@ export interface KusaApi {
   myReview(vendorId: string): Promise<Review | null>
   saveReview(input: { vendorId: string; stars: number; tags: string[]; text: string }): Promise<Review>
   reportReview(reviewId: string, reason: string): Promise<void>
+  listVideos(vendorId: string): Promise<VendorVideo[]>
+  /** A shopper's player couldn't play a video. */
+  reportVideoProblem(videoId: string, code?: number): Promise<void>
   recordEvent(vendorId: string, event: TrafficEvent, opts?: { firstVisitToday?: boolean; productId?: string; source?: TrafficSourceKey }): Promise<void>
 
   // Sponsored placements
@@ -54,6 +57,12 @@ export interface KusaApi {
   createProduct(input: NewProductInput): Promise<Product>
   updateProduct(productId: string, changes: ProductUpdate): Promise<Product>
   deleteProduct(productId: string): Promise<void>
+  myVideos(): Promise<MyVendorVideo[]>
+  addVideo(input: NewVideoInput): Promise<MyVendorVideo>
+  updateVideo(videoId: string, changes: VideoUpdate): Promise<MyVendorVideo>
+  deleteVideo(videoId: string): Promise<void>
+  reorderVideos(ids: string[]): Promise<MyVendorVideo[]>
+  recheckVideo(videoId: string): Promise<MyVendorVideo>
   promotionPlans(): Promise<PromotionPlans>
   myPromotions(): Promise<Promotion[]>
   requestPromotion(input: NewPromotionInput): Promise<Promotion>

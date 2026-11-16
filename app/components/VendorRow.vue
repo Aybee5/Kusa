@@ -9,7 +9,12 @@ defineProps<{ vendor: VendorWithMeta; active?: boolean; sponsored?: boolean }>()
     class="flex gap-3 border-t border-line py-3 text-ink first:border-t-0 lg:rounded-2xl lg:border lg:border-transparent lg:px-3 lg:first:border-t-transparent lg:hover:bg-surface"
     :class="active ? 'lg:!border-palm lg:bg-surface' : ''"
   >
-    <PhotoBox :tint="vendor.coverTint" :src="vendor.logo ?? vendor.coverImage" :alt="vendor.name" class="size-[76px] shrink-0 rounded-2xl" />
+    <div class="relative size-[76px] shrink-0">
+      <PhotoBox :tint="vendor.coverTint" :src="vendor.logo ?? vendor.coverImage" :alt="vendor.name" class="size-full rounded-2xl" />
+      <span v-if="vendor.videoCount" class="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full bg-black/65 py-0.5 pl-1 pr-1.5 text-[10px] font-bold text-white">
+        <AppIcon name="play" :size="10" />Video
+      </span>
+    </div>
     <div class="flex min-w-0 flex-1 flex-col gap-[3px]">
       <div class="flex items-center gap-1.5 text-[15px] font-bold">
         <span class="truncate">{{ vendor.name }}</span>

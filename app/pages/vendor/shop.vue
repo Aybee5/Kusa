@@ -143,6 +143,8 @@ useSeoMeta({ title: 'My shop · Kusa', robots: 'noindex' })
         </div>
       </section>
 
+      <ShopVideosEditor :fallback="vendor.coverImage ?? vendor.logo" />
+
       <!-- Details -->
       <section class="flex flex-col gap-3" aria-labelledby="details-h">
         <h2 id="details-h" class="text-[17px] font-bold">Details</h2>
