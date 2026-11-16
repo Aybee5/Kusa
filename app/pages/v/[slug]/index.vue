@@ -109,6 +109,7 @@ useSeoMeta({
 
       <!-- Tabs -->
       <section class="mt-4 flex flex-col gap-3.5 px-5 lg:mt-6 lg:px-0">
+        <ShopVideos :vendor="vendor" class="mb-1" />
         <div role="tablist" aria-label="Business sections" class="no-scrollbar flex gap-6 overflow-x-auto border-b border-line">
           <button
             v-for="t in tabs"

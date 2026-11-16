@@ -50,6 +50,13 @@
       "when": 1793271545531,
       "tag": "0006_merge_snacks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794830411030,
+      "tag": "0007_shop_videos",
+      "breakpoints": true
     }
   ]
 }

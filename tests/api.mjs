@@ -192,6 +192,60 @@ try {
     `${before.views}->${today.views}`)
   ok('60 days of stats', after.daily.length === 60 && after.sources.length > 0)
 
+  // Shop videos (links to TikTok/Instagram/YouTube/Facebook posts, played in their embed players)
+  const vids = {
+    tiktok: 'https://www.tiktok.com/@scout2015/video/6718335390845095173?is_from_webapp=1&sender_device=pc',
+    reel: 'instagram.com/reel/BsOGulcndj-/?igsh=abc123',
+    short: 'https://youtube.com/shorts/aqz-KE-bpKQ?si=xyz',
+    fb: 'https://www.facebook.com/facebook/videos/10153231379946729/',
+  }
+  r = await req('POST', '/me/videos', { token: owner.token, body: { url: vids.tiktok, title: 'Fresh puff-puff' } })
+  ok('add a TikTok video', r.status === 200 && r.data.provider === 'tiktok' && r.data.url === 'https://www.tiktok.com/@scout2015/video/6718335390845095173'
+    && r.data.embedUrl.startsWith('https://www.tiktok.com/player/v1/6718335390845095173') && r.data.aspect === 'portrait' && r.data.title === 'Fresh puff-puff', JSON.stringify(r.data))
+  const tiktokId = r.data.id
+  r = await req('POST', '/me/videos', { token: owner.token, body: { url: vids.reel } })
+  ok('add an Instagram reel (tracking removed)', r.status === 200 && r.data.provider === 'instagram' && r.data.url === 'https://www.instagram.com/reel/BsOGulcndj-/' && r.data.embedUrl === 'https://www.instagram.com/reel/BsOGulcndj-/embed/captioned/', JSON.stringify(r.data))
+  r = await req('POST', '/me/videos', { token: owner.token, body: { url: vids.short } })
+  ok('add a YouTube Short with its thumbnail', r.status === 200 && r.data.provider === 'youtube' && r.data.aspect === 'portrait' && r.data.thumbnail === 'https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg', JSON.stringify(r.data))
+  const shortId = r.data.id
+  r = await req('POST', '/me/videos', { token: owner.token, body: { url: vids.fb } })
+  ok('add a Facebook video', r.status === 200 && r.data.provider === 'facebook' && r.data.aspect === 'landscape')
+  ok('same video twice refused', (await req('POST', '/me/videos', { token: owner.token, body: { url: 'https://m.tiktok.com/@scout2015/video/6718335390845095173' } })).status === 409)
+  r = await req('POST', '/me/videos', { token: owner.token, body: { url: 'https://www.instagram.com/bitebox.kano/' } })
+  ok('profile link refused', r.status === 400 && /one video or post/.test(r.data.message), r.data?.message)
+  ok('other sites refused', (await req('POST', '/me/videos', { token: owner.token, body: { url: 'https://example.com/video.mp4' } })).status === 400)
+  if (process.env.EXPECT_VIDEO_CHECKS === 'on') {
+    r = await req('POST', '/me/videos', { token: owner.token, body: { url: 'https://youtu.be/zzzzzzzzzz0' } })
+    ok('a YouTube video that doesn’t exist is refused', r.status === 400, `${r.status}`)
+  }
+  ok('shoppers can’t add videos', (await req('POST', '/me/videos', { token: shopper.token, body: { url: vids.short } })).status === 403)
+  const cover = await req('POST', '/uploads', { token: owner.token, body: { kind: 'shop', dataUrl: PNG } })
+  r = await req('PATCH', `/me/videos/${tiktokId}`, { token: owner.token, body: { title: 'Puff-puff, hot', coverImageKey: cover.data.key } })
+  ok('set a title and cover photo', r.data?.title === 'Puff-puff, hot' && r.data.thumbnail === `/api/files/${cover.data.key}`)
+  r = await req('GET', '/me/videos', { token: owner.token })
+  const order = r.data.map((x) => x.id).reverse()
+  r = await req('PUT', '/me/videos/order', { token: owner.token, body: { ids: order } })
+  ok('reorder videos', r.status === 200 && r.data.map((x) => x.id).join() === order.join())
+  ok('reorder must include every video', (await req('PUT', '/me/videos/order', { token: owner.token, body: { ids: order.slice(1) } })).status === 400)
+  r = await req('GET', '/vendors/bite-box-kano/videos')
+  ok('shoppers see the videos in order', r.status === 200 && r.data.map((x) => x.id).join() === order.join() && !('status' in r.data[0]))
+  r = await req('GET', '/vendors', { query: { q: 'bite box' } })
+  ok('search results count videos', r.data.find((v) => v.slug === 'bite-box-kano')?.videoCount === 4 && r.data.filter((v) => v.slug !== 'bite-box-kano').every((v) => v.videoCount === 0))
+  ok('player problem reported', (await req('POST', `/videos/${tiktokId}/problem`, { body: { code: 1001 } })).status === 204)
+  r = await req('GET', '/me/videos', { token: owner.token })
+  ok('vendor sees the problem report', !!r.data.find((x) => x.id === tiktokId).problemReportedAt)
+  r = await req('POST', `/me/videos/${tiktokId}/check`, { token: owner.token })
+  ok('vendor clears it after checking', r.status === 200 && r.data.problemReportedAt === null && r.data.status === 'active')
+  ok('can’t delete another shop’s video', (await req('DELETE', `/me/videos/${shortId}`, { token: (await signIn('08160001190')).token })).status === 404)
+  if (process.env.EXPECT_VIDEO_CHECKS !== 'on') {
+    // Made-up ids, accepted only when links aren't checked with the platforms (VIDEO_CHECKS=off).
+    for (const u of ['https://youtu.be/aqz-KE-bpK1', 'https://www.youtube.com/watch?v=aqz-KE-bpK2']) await req('POST', '/me/videos', { token: owner.token, body: { url: u } })
+    r = await req('POST', '/me/videos', { token: owner.token, body: { url: 'https://www.youtube.com/watch?v=aqz-KE-bpK3' } })
+    ok('at most 6 videos', r.status === 400 && /up to 6/.test(r.data.message), r.data?.message)
+  }
+  ok('remove a video', (await req('DELETE', `/me/videos/${shortId}`, { token: owner.token })).status === 204)
+  ok('removed video gone', !(await req('GET', '/vendors/bite-box-kano/videos')).data.some((x) => x.id === shortId))
+
   // New vendor: register, upload, verify
   const newbie = await signIn('07031234567', 'Rukayya Musa')
   r = await req('POST', '/me/vendor', { token: newbie.token, body: { name: 'Rukayya Cakes', category: 'cakes', phone: '07031234567', whatsapp: '07031234567', instagram: null, showPhone: true, primaryContact: 'whatsapp', area: 'Zoo Road', city: 'Kano', landmark: 'Near the roundabout', lat: 12.0, lng: 8.53, delivery: true, pickup: false } })

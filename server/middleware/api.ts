@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   if (!event.path.startsWith('/api/')) return
   const handled = handleCors(event, {
     origin: (origin) => serverConfig().corsOrigins.includes(origin),
-    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['authorization', 'content-type'],
     maxAge: '86400',
   })

@@ -165,6 +165,8 @@ export interface VendorWithMeta extends Vendor {
   openState: OpenState
   productCount: number
   fromPrice: number | null
+  /** Shop videos shoppers can play (TikTok, Instagram, YouTube, Facebook). */
+  videoCount: number
 }
 
 export interface OpenState {

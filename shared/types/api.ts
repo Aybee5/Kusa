@@ -1,4 +1,5 @@
 // Shapes exchanged between the app and the API.
+import type { VideoAspect, VideoProvider } from '../utils/videos'
 import type {
   CategoryId, ContactChannel, OpeningHours, Product, ProductOption, Review, SessionUser, Shopper, ShopperStatus, Vendor, VendorWithMeta,
 } from './index'
@@ -203,4 +204,42 @@ export interface Promoted {
   featured: PromotedVendor[]
   banners: PromotedBanner[]
   products: PromotedProduct[]
+}
+
+// --- Shop videos -------------------------------------------------------------
+
+/** A vendor's TikTok, Instagram, YouTube or Facebook post, played in that platform's embed player. */
+export interface VendorVideo {
+  id: string
+  provider: VideoProvider
+  /** Link to the post on the platform. */
+  url: string
+  /** The platform's player; load it only when the shopper taps play. */
+  embedUrl: string
+  title: string
+  /** The vendor's cover photo, or the platform's thumbnail where there's a stable one (YouTube). */
+  thumbnail: string | null
+  aspect: VideoAspect
+}
+
+/** What the vendor sees in the shop editor. */
+export interface MyVendorVideo extends VendorVideo {
+  /** unavailable = the platform says the post is gone or private; hidden from shoppers. */
+  status: 'active' | 'unavailable'
+  coverImageKey: string | null
+  /** Set when a shopper's player couldn't play it (TikTok can't be checked from our server). */
+  problemReportedAt: string | null
+  checkedAt: string | null
+}
+
+export interface NewVideoInput {
+  url: string
+  title?: string
+  coverImageKey?: string
+}
+
+/** coverImageKey null removes the cover photo. */
+export interface VideoUpdate {
+  title?: string
+  coverImageKey?: string | null
 }

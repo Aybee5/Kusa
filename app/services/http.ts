@@ -21,7 +21,7 @@ function messageOf(data?: { statusMessage?: string; message?: string }): string 
 
 /** The Kusa API over HTTP (server/api). */
 export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): KusaApi {
-  async function call<T>(path: string, opts: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; query?: Record<string, unknown>; body?: object } = {}): Promise<T> {
+  async function call<T>(path: string, opts: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; query?: Record<string, unknown>; body?: object } = {}): Promise<T> {
     const token = await getToken()
     try {
       return await $fetch<T>(path, {
@@ -59,6 +59,8 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     myReview: (vendorId) => call(`/vendors/${vendorId}/reviews/mine`),
     saveReview: ({ vendorId, ...body }) => call(`/vendors/${vendorId}/reviews`, { method: 'POST', body }),
     reportReview: (reviewId, reason) => call(`/reviews/${reviewId}/report`, { method: 'POST', body: { reason } }),
+    listVideos: (vendorId) => call(`/vendors/${vendorId}/videos`),
+    reportVideoProblem: (id, code) => call<void>(`/videos/${id}/problem`, { method: 'POST', body: { code } }).then(() => {}).catch(() => {}),
     recordEvent: (vendorId, event, opts) => call<void>(`/vendors/${vendorId}/events`, { method: 'POST', body: { event, ...opts } }).catch(() => {}),
 
     promoted: (placement, f, origin) => call('/promoted', { query: { placement, ...(f ? searchQuery(f) : {}), ...origin } }),
@@ -82,6 +84,12 @@ export function createHttpApi({ baseURL, getToken, onUnauthorized }: Options): K
     createProduct: (input) => call('/me/products', { method: 'POST', body: input }),
     updateProduct: (id, changes) => call(`/me/products/${id}`, { method: 'PATCH', body: changes }),
     deleteProduct: (id) => call<void>(`/me/products/${id}`, { method: 'DELETE' }).then(() => {}),
+    myVideos: () => call('/me/videos'),
+    addVideo: (input) => call('/me/videos', { method: 'POST', body: input }),
+    updateVideo: (id, changes) => call(`/me/videos/${id}`, { method: 'PATCH', body: changes }),
+    deleteVideo: (id) => call<void>(`/me/videos/${id}`, { method: 'DELETE' }).then(() => {}),
+    reorderVideos: (ids) => call('/me/videos/order', { method: 'PUT', body: { ids } }),
+    recheckVideo: (id) => call(`/me/videos/${id}/check`, { method: 'POST' }),
     promotionPlans: () => call('/promotions/plans'),
     myPromotions: () => call('/me/promotions'),
     requestPromotion: (input) => call('/me/promotions', { method: 'POST', body: input }),
